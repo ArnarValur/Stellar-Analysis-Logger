@@ -84,7 +84,7 @@ class HttpClient:
             logger.error(f"Invalid URL for POST request: '{url}'")
             if callback:
                 # Args: success (bool), response_data (dict/str), status_code (int/None)
-                callback(False, {"error": "Invalid URL provided"}, None)
+                callback(False, {"error_origin": "URLValidation", "error": "Invalid URL provided"}, None)
             return
 
         headers = {
@@ -92,7 +92,10 @@ class HttpClient:
             "Content-Type": "application/json"
         }
         if api_key:
-            headers["Authorization"] = f"Bearer {api_key}" # Common practice
+            # Your Cloud Function expects 'x-api-key'
+            headers["x-api-key"] = api_key
+            # If you wanted Bearer token, it would be:
+            # headers["Authorization"] = f"Bearer {api_key}"
 
         request_item = SalRequest(url, payload, headers, callback)
         self._request_queue.put(request_item)
@@ -123,33 +126,56 @@ class HttpClient:
                     response_data = None
                     try:
                         response_data = response.json()
-                    except ValueError: # Handle cases where response is not JSON
-                        logger.warning(f"Response from {request_item.url} was not valid JSON, returning text.")
+                    except ValueError: # Handle cases where response is not JSON (requests.exceptions.JSONDecodeError is a subclass of ValueError)
+                        logger.warning(f"Response from {request_item.url} was not valid JSON, returning text. Body: {response.text[:500]}")
                         response_data = response.text
 
                     if request_item.callback:
                         request_item.callback(True, response_data, response.status_code)
 
                 except requests.exceptions.HTTPError as e:
-                    err_msg = f"HTTP error for {request_item.url}: {e.response.status_code if e.response else 'N/A'}"
-                    logger.error(err_msg + f" - Response: {e.response.text if e.response else 'No response text'}")
+                    # Log the type of exception and the exception string itself, WITH FULL TRACEBACK
+                    logger.error(
+                        f"Caught HTTPError in _worker. Type: {type(e).__name__}. Exception: {str(e)}. Has response attribute: {hasattr(e, 'response')}. Response object: {e.response}",
+                        exc_info=True  # <<< THIS IS CRITICAL FOR FULL TRACEBACK
+                    )
+                    
+                    # Original log line format for comparison, using info to not duplicate error unless needed
+                    original_err_msg = f"HTTP error for {request_item.url}: {e.response.status_code if e.response else 'N/A'}"
+                    logger.info(f"Original format log would be: {original_err_msg} - Response: {e.response.text if e.response else 'No response text'}") 
+                    
                     if request_item.callback:
-                        request_item.callback(False, e.response.text if e.response else err_msg, e.response.status_code if e.response else None)
-                except requests.exceptions.Timeout:
-                    logger.error(f"Request timed out for {request_item.url}")
+                        error_payload_http = {
+                            "error_origin": "HTTPError_Block",
+                            "exception_type": type(e).__name__,
+                            "exception_message": str(e),
+                            "response_attr_is_none": e.response is None,
+                            "response_status_code_on_exception_obj": e.response.status_code if e.response else "N/A (e.response was None/False)",
+                            "response_text_on_exception_obj": e.response.text if e.response else "N/A (e.response was None/False)"
+                        }
+                        request_item.callback(False, error_payload_http, e.response.status_code if e.response else None)
+                
+                except requests.exceptions.Timeout as e:
+                    logger.error(f"Request timed out for {request_item.url}. Type: {type(e).__name__}. Exception: {str(e)}", exc_info=True)
                     if request_item.callback:
-                        request_item.callback(False, {"error": "Request timed out"}, None)
-                except requests.exceptions.RequestException as e:
-                    logger.error(f"Request failed for {request_item.url}: {e}")
+                        request_item.callback(False, {"error_origin": "Timeout_Block", "error": "Request timed out", "exception_type": type(e).__name__, "exception_message": str(e)}, None)
+                
+                except requests.exceptions.RequestException as e: # Catches ConnectionError, SSLError, etc.
+                    logger.error(f"Request failed for {request_item.url}. Type: {type(e).__name__}. Exception: {str(e)}", exc_info=True)
                     if request_item.callback:
-                        request_item.callback(False, {"error": str(e)}, None)
+                        error_payload_req = {
+                            "error_origin": "RequestException_Block",
+                            "exception_type": type(e).__name__,
+                            "exception_message": str(e)
+                        }
+                        request_item.callback(False, error_payload_req, None)
                 finally:
                     self._request_queue.task_done()
 
             except queue.Empty:
                 # This is expected when the queue is empty, loop and check shutdown_event
                 continue
-            except Exception as e:
+            except Exception as e: # Generic catch-all for unexpected errors in the worker loop
                 logger.critical(f"Unexpected critical error in HttpClient worker: {e}", exc_info=True)
                 # Avoid busy-looping on unexpected critical errors; sleep a bit longer
                 time.sleep(WORKER_SLEEP_S * 5)
@@ -180,4 +206,3 @@ def stop_http_client():
         http_client_instance = None # Clear the global instance
     else:
         logger.info("Global HttpClient instance not found or already stopped.")
-
