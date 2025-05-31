@@ -20,3 +20,6 @@ venv/
 # OS specific
 .DS_Store
 Thumbs.db
+
+# Docs
+.docs
