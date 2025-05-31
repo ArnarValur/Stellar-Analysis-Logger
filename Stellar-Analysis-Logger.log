@@ -1,2 +1,24 @@
-2025-05-30 15:34:30.244 | INFO | EDMC.StellarAnalysisLogger | journal_entry called. Event type: FuelScoop, CMDR: ADDINATOR, System: Ploi Thua DV-G d10-14
-2025-05-30 15:34:55.461 | INFO | EDMC.StellarAnalysisLogger | journal_entry called. Event type: StartJump, CMDR: ADDINATOR, System: Ploi Thua DV-G d10-14
+2025-05-31 11:28:41.985 | INFO | EDMC.StellarAnalysisLogger | Dedicated logging to file: C:\Users\arnar\AppData\Local\EDMarketConnector\plugins\Stellar-Analysis-Logger\Stellar-Analysis-Logger.log
+2025-05-31 11:28:41.985 | INFO | EDMC.StellarAnalysisLogger | Logging setup complete for StellarAnalysisLogger
+2025-05-31 11:28:41.986 | INFO | EDMC.StellarAnalysisLogger | Starting plugin Stellar Analysis Logger v0.2.0 from directory: C:\Users\arnar\AppData\Local\EDMarketConnector\plugins\Stellar-Analysis-Logger
+2025-05-31 11:28:41.986 | INFO | EDMC.StellarAnalysisLogger | Initializing SettingsManager...
+2025-05-31 11:28:41.986 | INFO | EDMC.StellarAnalysisLogger | SettingsManager initialized.
+2025-05-31 11:28:41.986 | INFO | EDMC.StellarAnalysisLogger | Plugin enabled: True
+2025-05-31 11:28:41.986 | INFO | EDMC.StellarAnalysisLogger | API URL: https://stellar.avj.info/api
+2025-05-31 11:28:41.986 | INFO | EDMC.StellarAnalysisLogger | Global HttpClient not found, creating new instance.
+2025-05-31 11:28:41.986 | INFO | EDMC.StellarAnalysisLogger | Initializing HttpClient for Stellar Analysis Logger v0.2.0...
+2025-05-31 11:28:41.988 | INFO | EDMC.StellarAnalysisLogger | HttpClient initialized.
+2025-05-31 11:28:41.988 | INFO | EDMC.StellarAnalysisLogger | HttpClient worker started processing queue.
+2025-05-31 11:28:41.988 | INFO | EDMC.StellarAnalysisLogger | HttpClient worker thread started.
+2025-05-31 11:28:41.988 | INFO | EDMC.StellarAnalysisLogger | HttpClient initialized.
+2025-05-31 11:28:41.988 | INFO | EDMC.StellarAnalysisLogger | Initializing DataHandler...
+2025-05-31 11:28:41.989 | INFO | EDMC.StellarAnalysisLogger | DataHandler initialized.
+2025-05-31 11:28:41.989 | INFO | EDMC.StellarAnalysisLogger | DataHandler initialized.
+2025-05-31 11:28:41.989 | INFO | EDMC.StellarAnalysisLogger | UIManager __init__ called.
+2025-05-31 11:28:41.989 | INFO | EDMC.StellarAnalysisLogger | UIManager initialized.
+2025-05-31 11:28:48.504 | INFO | EDMC.StellarAnalysisLogger | Stopping plugin Stellar Analysis Logger
+2025-05-31 11:28:48.504 | INFO | EDMC.StellarAnalysisLogger | Stopping global HttpClient instance.
+2025-05-31 11:28:48.504 | INFO | EDMC.StellarAnalysisLogger | Attempting to stop HttpClient worker thread...
+2025-05-31 11:28:48.505 | INFO | EDMC.StellarAnalysisLogger | HttpClient worker finished processing queue and is shutting down.
+2025-05-31 11:28:48.505 | INFO | EDMC.StellarAnalysisLogger | HttpClient worker thread stopped successfully.
+2025-05-31 11:28:48.505 | INFO | EDMC.StellarAnalysisLogger | HttpClient stopped.

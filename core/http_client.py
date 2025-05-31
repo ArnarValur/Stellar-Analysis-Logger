@@ -6,10 +6,10 @@ import time
 import requests
 
 from .logger import logger
-
-# Constants
-REQUEST_TIMEOUT_S = 10
-WORKER_SLEEP_S = 1
+from .constants import (
+    REQUEST_TIMEOUT_S,
+    WORKER_SLEEP_S
+)
 
 class SalRequest:
     """Encapsulates a request for the HttpClient."""
@@ -31,16 +31,17 @@ class HttpClient:
         self._worker_thread = None
         self._shutdown_event = threading.Event()
 
-        # Regex for URL validation (adapted from BGS-Tally's requestmanager.py)
+        # Regex for URL validation (Contribution: adapted from BGS-Tally's requestmanager.py)
         self._url_validator = re.compile(
-            r'^(?:http|ftp)s?://'  # http:// or https://
-            r'(?:(?:[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?\.)+(?:[A-Z]{2,6}\.?|[A-Z0-9-]{2,}\.?)|'  # domain...
-            r'localhost|'  # localhost...
-            r'\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})'  # ...or ip
-            r'(?::\d+)?'  # optional port
+            r'^(?:http|ftp)s?://'
+            r'(?:(?:[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?\.)+(?:[A-Z]{2,6}\.?|[A-Z0-9-]{2,}\.?)|'
+            r'localhost|'
+            r'\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})'
+            r'(?::\d+)?'
             r'(?:/?|[/?]\S+)$', re.IGNORECASE)
         logger.info("HttpClient initialized.")
 
+    # Starts the HTTP client's worker thread if it is not already running.
     def start(self):
         """Starts the HTTP client's worker thread."""
         if self._worker_thread is None or not self._worker_thread.is_alive():
@@ -52,18 +53,18 @@ class HttpClient:
         else:
             logger.info("HttpClient worker thread already running.")
 
+    # Stops the HTTP client's worker thread and cleans up resources.
     def stop(self):
         """Stops the HTTP client's worker thread."""
         logger.info("Attempting to stop HttpClient worker thread...")
         self._shutdown_event.set()
         if self._worker_thread and self._worker_thread.is_alive():
             try:
-                # Try to unblock the queue.get() if it's waiting
                 self._request_queue.put_nowait(None)
             except queue.Full:
-                pass # Worker will eventually pick something or notice shutdown event
+                pass
 
-            self._worker_thread.join(timeout=REQUEST_TIMEOUT_S + WORKER_SLEEP_S + 1) # Wait for worker
+            self._worker_thread.join(timeout=REQUEST_TIMEOUT_S + WORKER_SLEEP_S + 1)
             if self._worker_thread.is_alive():
                 logger.warning("HttpClient worker thread did not stop in the allocated time.")
             else:
@@ -72,43 +73,45 @@ class HttpClient:
             logger.info("HttpClient worker thread was not running or already stopped.")
         self._worker_thread = None
 
-
+    # Validates the URL using a regex pattern.
     def _is_url_valid(self, url_string: str) -> bool:
+        """Validates the provided URL string."""
         if not url_string or not isinstance(url_string, str):
             return False
         return self._url_validator.match(url_string) is not None
 
+    # Sends a JSON POST request to the specified URL with the given payload and headers.
     def send_json_post_request(self, url: str, payload: dict, api_key: str = None, callback: callable = None):
         """Queues a JSON POST request."""
         if not self._is_url_valid(url):
             logger.error(f"Invalid URL for POST request: '{url}'")
             if callback:
-                # Args: success (bool), response_data (dict/str), status_code (int/None)
                 callback(False, {"error_origin": "URLValidation", "error": "Invalid URL provided"}, None)
             return
 
+        # Headers for the request, including User-Agent and Content-Type.
         headers = {
             "User-Agent": self.user_agent,
             "Content-Type": "application/json"
         }
+
+        # If an API key is provided, add it to the headers.
         if api_key:
-            # Your Cloud Function expects 'x-api-key'
             headers["x-api-key"] = api_key
-            # If you wanted Bearer token, it would be:
-            # headers["Authorization"] = f"Bearer {api_key}"
 
         request_item = SalRequest(url, payload, headers, callback)
         self._request_queue.put(request_item)
         logger.debug(f"Queued {request_item}")
 
+    # Worker method that processes requests from the queue.
     def _worker(self):
         logger.info("HttpClient worker started processing queue.")
         while not self._shutdown_event.is_set():
             try:
                 request_item = self._request_queue.get(timeout=WORKER_SLEEP_S)
 
-                if request_item is None or self._shutdown_event.is_set(): # Check for shutdown signal
-                    if request_item: self._request_queue.task_done() # Mark dummy item as done
+                if request_item is None or self._shutdown_event.is_set():
+                    if request_item: self._request_queue.task_done()
                     break
 
                 logger.info(f"Processing {request_item}")
@@ -116,17 +119,17 @@ class HttpClient:
                 try:
                     response = requests.post(
                         request_item.url,
-                        json=request_item.payload, # requests library handles json.dumps
+                        json=request_item.payload,
                         headers=request_item.headers,
                         timeout=REQUEST_TIMEOUT_S
                     )
-                    response.raise_for_status()  # Raises HTTPError for 4XX or 5XX status codes
+                    response.raise_for_status()
                     
                     logger.info(f"Request to {request_item.url} successful (Status: {response.status_code}).")
                     response_data = None
                     try:
                         response_data = response.json()
-                    except ValueError: # Handle cases where response is not JSON (requests.exceptions.JSONDecodeError is a subclass of ValueError)
+                    except ValueError:
                         logger.warning(f"Response from {request_item.url} was not valid JSON, returning text. Body: {response.text[:500]}")
                         response_data = response.text
 
@@ -134,13 +137,11 @@ class HttpClient:
                         request_item.callback(True, response_data, response.status_code)
 
                 except requests.exceptions.HTTPError as e:
-                    # Log the type of exception and the exception string itself, WITH FULL TRACEBACK
                     logger.error(
                         f"Caught HTTPError in _worker. Type: {type(e).__name__}. Exception: {str(e)}. Has response attribute: {hasattr(e, 'response')}. Response object: {e.response}",
-                        exc_info=True  # <<< THIS IS CRITICAL FOR FULL TRACEBACK
+                        exc_info=True
                     )
-                    
-                    # Original log line format for comparison, using info to not duplicate error unless needed
+
                     original_err_msg = f"HTTP error for {request_item.url}: {e.response.status_code if e.response else 'N/A'}"
                     logger.info(f"Original format log would be: {original_err_msg} - Response: {e.response.text if e.response else 'No response text'}") 
                     
@@ -160,7 +161,7 @@ class HttpClient:
                     if request_item.callback:
                         request_item.callback(False, {"error_origin": "Timeout_Block", "error": "Request timed out", "exception_type": type(e).__name__, "exception_message": str(e)}, None)
                 
-                except requests.exceptions.RequestException as e: # Catches ConnectionError, SSLError, etc.
+                except requests.exceptions.RequestException as e:
                     logger.error(f"Request failed for {request_item.url}. Type: {type(e).__name__}. Exception: {str(e)}", exc_info=True)
                     if request_item.callback:
                         error_payload_req = {
@@ -169,23 +170,22 @@ class HttpClient:
                             "exception_message": str(e)
                         }
                         request_item.callback(False, error_payload_req, None)
+                
                 finally:
                     self._request_queue.task_done()
 
             except queue.Empty:
-                # This is expected when the queue is empty, loop and check shutdown_event
                 continue
-            except Exception as e: # Generic catch-all for unexpected errors in the worker loop
+            except Exception as e:
                 logger.critical(f"Unexpected critical error in HttpClient worker: {e}", exc_info=True)
-                # Avoid busy-looping on unexpected critical errors; sleep a bit longer
                 time.sleep(WORKER_SLEEP_S * 5)
 
         logger.info("HttpClient worker finished processing queue and is shutting down.")
 
 # Global instance of the HttpClient
-# This will be None until plugin_start creates it via initialize_http_client.
 http_client_instance = None
 
+# Function to initialize the global HttpClient instance
 def initialize_http_client(plugin_name: str, plugin_version: str):
     """Creates and starts the global HttpClient instance."""
     global http_client_instance
@@ -197,12 +197,13 @@ def initialize_http_client(plugin_name: str, plugin_version: str):
         logger.info("Global HttpClient already initialized.")
     return http_client_instance
 
+# Function to stop the global HttpClient instance
 def stop_http_client():
     """Stops the global HttpClient instance."""
     global http_client_instance
     if http_client_instance:
         logger.info("Stopping global HttpClient instance.")
         http_client_instance.stop()
-        http_client_instance = None # Clear the global instance
+        http_client_instance = None
     else:
         logger.info("Global HttpClient instance not found or already stopped.")

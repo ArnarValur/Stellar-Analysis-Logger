@@ -1,27 +1,22 @@
 import logging
-import os # ADDED: For path manipulation
-from .constants import PLUGIN_NAME_FOR_LOGGING, LOG_FILE_NAME # MODIFIED: Import LOG_FILE_NAME
+import os
+from .constants import PLUGIN_NAME_FOR_LOGGING, LOG_FILE_NAME
 
-# Use the plugin\'s folder name for the logger to make it easy to identify
-# messages from this plugin.
 logger = logging.getLogger(f"EDMC.{PLUGIN_NAME_FOR_LOGGING}")
 
-def setup_logging(plugin_dir=None): # MODIFIED: Accept plugin_dir
+def setup_logging(plugin_dir=None):
     """Set up the logger for the plugin"""
-    # If the logger already has handlers, it means EDMC has already set it up
-    # or we have set it up in a previous call.
-    if not logger.handlers: # MODIFIED: Check logger.handlers instead of logger.hasHandlers()
+
+    if not logger.handlers:
         logger.setLevel(logging.INFO)
 
         # Common formatter
         log_formatter = logging.Formatter(
             f'%(asctime)s | %(levelname)s | %(name)s | %(message)s'
         )
-        log_formatter.default_time_format = '%Y-%m-%d %H:%M:%S' # CHANGED: More standard time format
+        log_formatter.default_time_format = '%Y-%m-%d %H:%M:%S'
         log_formatter.default_msec_format = '%s.%03d'
 
-        # Console Handler (mimics EDMC default but might be redundant if EDMC also logs)
-        # We keep it for now to ensure logs appear somewhere if EDMC doesn't pick them up.
         console_handler = logging.StreamHandler()
         console_handler.setFormatter(log_formatter)
         logger.addHandler(console_handler)
@@ -30,7 +25,7 @@ def setup_logging(plugin_dir=None): # MODIFIED: Accept plugin_dir
         if plugin_dir and LOG_FILE_NAME:
             log_file_path = os.path.join(plugin_dir, LOG_FILE_NAME)
             try:
-                file_handler = logging.FileHandler(log_file_path, mode='a') # 'a' for append
+                file_handler = logging.FileHandler(log_file_path, mode='a')
                 file_handler.setFormatter(log_formatter)
                 logger.addHandler(file_handler)
                 logger.info(f"Dedicated logging to file: {log_file_path}")
