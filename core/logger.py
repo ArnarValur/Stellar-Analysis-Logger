@@ -28,10 +28,10 @@ def setup_logging(plugin_dir=None):
                 file_handler = logging.FileHandler(log_file_path, mode='a')
                 file_handler.setFormatter(log_formatter)
                 logger.addHandler(file_handler)
-                logger.info(f"Dedicated logging to file: {log_file_path}")
+                # This log is fine, it indicates where the log file is.
+                # logger.info(f"Dedicated logging to file: {log_file_path}") 
+                # However, to minimize production logs, we can consider removing or making it debug if not essential for all users
             except Exception as e:
                 logger.error(f"Failed to set up dedicated file logging to {log_file_path}: {e}")
         else:
             logger.warning("Plugin directory or log file name not provided, dedicated file logging disabled.")
-
-    logger.info(f"Logging setup complete for {PLUGIN_NAME_FOR_LOGGING}")

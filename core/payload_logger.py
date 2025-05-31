@@ -26,5 +26,4 @@ def setup_payload_logging(plugin_dir: str):
     payload_logger.addHandler(handler)
 
     payload_logger.propagate = False
-    payload_logger.info(f"Payload logging initialized. Log file: {log_file_path}")
 

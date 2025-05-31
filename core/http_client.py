@@ -10,6 +10,7 @@ from .constants import (
     REQUEST_TIMEOUT_S,
     WORKER_SLEEP_S
 )
+from .settings_manager import settings_manager # Added import
 
 class SalRequest:
     """Encapsulates a request for the HttpClient."""
@@ -25,7 +26,8 @@ class SalRequest:
 class HttpClient:
     """Handles asynchronous HTTP POST requests with JSON payloads."""
     def __init__(self, plugin_name: str, plugin_version: str):
-        logger.info(f"Initializing HttpClient for {plugin_name} v{plugin_version}...")
+        if settings_manager and settings_manager.dev_mode_enabled:
+            logger.info(f"Initializing HttpClient for {plugin_name} v{plugin_version}...")
         self.user_agent = f"{plugin_name}/{plugin_version}"
         self._request_queue = queue.Queue()
         self._worker_thread = None
@@ -38,8 +40,9 @@ class HttpClient:
             r'localhost|'
             r'\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})'
             r'(?::\d+)?'
-            r'(?:/?|[/?]\S+)$', re.IGNORECASE)
-        logger.info("HttpClient initialized.")
+            r'(?:/?|[/?]\\S+)$', re.IGNORECASE)
+        if settings_manager and settings_manager.dev_mode_enabled:
+            logger.info("HttpClient initialized.")
 
     # Starts the HTTP client's worker thread if it is not already running.
     def start(self):
@@ -49,14 +52,17 @@ class HttpClient:
             self._worker_thread = threading.Thread(target=self._worker, name="SAL-HttpClientWorker")
             self._worker_thread.daemon = True
             self._worker_thread.start()
-            logger.info("HttpClient worker thread started.")
+            if settings_manager and settings_manager.dev_mode_enabled:
+                logger.info("HttpClient worker thread started.")
         else:
-            logger.info("HttpClient worker thread already running.")
+            if settings_manager and settings_manager.dev_mode_enabled:
+                logger.info("HttpClient worker thread already running.")
 
     # Stops the HTTP client's worker thread and cleans up resources.
     def stop(self):
         """Stops the HTTP client's worker thread."""
-        logger.info("Attempting to stop HttpClient worker thread...")
+        if settings_manager and settings_manager.dev_mode_enabled:
+            logger.info("Attempting to stop HttpClient worker thread...")
         self._shutdown_event.set()
         if self._worker_thread and self._worker_thread.is_alive():
             try:
@@ -68,9 +74,11 @@ class HttpClient:
             if self._worker_thread.is_alive():
                 logger.warning("HttpClient worker thread did not stop in the allocated time.")
             else:
-                logger.info("HttpClient worker thread stopped successfully.")
+                if settings_manager and settings_manager.dev_mode_enabled:
+                    logger.info("HttpClient worker thread stopped successfully.")
         else:
-            logger.info("HttpClient worker thread was not running or already stopped.")
+            if settings_manager and settings_manager.dev_mode_enabled:
+                logger.info("HttpClient worker thread was not running or already stopped.")
         self._worker_thread = None
 
     # Validates the URL using a regex pattern.
@@ -101,11 +109,13 @@ class HttpClient:
 
         request_item = SalRequest(url, payload, headers, callback)
         self._request_queue.put(request_item)
-        logger.debug(f"Queued {request_item}")
+        if settings_manager and settings_manager.dev_mode_enabled:
+            logger.debug(f"Queued {request_item}")
 
     # Worker method that processes requests from the queue.
     def _worker(self):
-        logger.info("HttpClient worker started processing queue.")
+        if settings_manager and settings_manager.dev_mode_enabled:
+            logger.info("HttpClient worker started processing queue.")
         while not self._shutdown_event.is_set():
             try:
                 request_item = self._request_queue.get(timeout=WORKER_SLEEP_S)
@@ -114,7 +124,8 @@ class HttpClient:
                     if request_item: self._request_queue.task_done()
                     break
 
-                logger.info(f"Processing {request_item}")
+                if settings_manager and settings_manager.dev_mode_enabled:
+                    logger.info(f"Processing {request_item}")
                 response = None
                 try:
                     response = requests.post(
@@ -125,7 +136,8 @@ class HttpClient:
                     )
                     response.raise_for_status()
                     
-                    logger.info(f"Request to {request_item.url} successful (Status: {response.status_code}).")
+                    if settings_manager and settings_manager.dev_mode_enabled:
+                        logger.info(f"Request to {request_item.url} successful (Status: {response.status_code}).")
                     response_data = None
                     try:
                         response_data = response.json()
@@ -143,7 +155,8 @@ class HttpClient:
                     )
 
                     original_err_msg = f"HTTP error for {request_item.url}: {e.response.status_code if e.response else 'N/A'}"
-                    logger.info(f"Original format log would be: {original_err_msg} - Response: {e.response.text if e.response else 'No response text'}") 
+                    if settings_manager and settings_manager.dev_mode_enabled:
+                        logger.info(f"Original format log would be: {original_err_msg} - Response: {e.response.text if e.response else 'No response text'}") 
                     
                     if request_item.callback:
                         error_payload_http = {
@@ -180,7 +193,8 @@ class HttpClient:
                 logger.critical(f"Unexpected critical error in HttpClient worker: {e}", exc_info=True)
                 time.sleep(WORKER_SLEEP_S * 5)
 
-        logger.info("HttpClient worker finished processing queue and is shutting down.")
+        if settings_manager and settings_manager.dev_mode_enabled:
+            logger.info("HttpClient worker finished processing queue and is shutting down.")
 
 # Global instance of the HttpClient
 http_client_instance = None
@@ -190,11 +204,13 @@ def initialize_http_client(plugin_name: str, plugin_version: str):
     """Creates and starts the global HttpClient instance."""
     global http_client_instance
     if http_client_instance is None:
-        logger.info("Global HttpClient not found, creating new instance.")
+        if settings_manager and settings_manager.dev_mode_enabled:
+            logger.info("Global HttpClient not found, creating new instance.")
         http_client_instance = HttpClient(plugin_name, plugin_version)
         http_client_instance.start()
     else:
-        logger.info("Global HttpClient already initialized.")
+        if settings_manager and settings_manager.dev_mode_enabled:
+            logger.info("Global HttpClient already initialized.")
     return http_client_instance
 
 # Function to stop the global HttpClient instance
@@ -202,8 +218,10 @@ def stop_http_client():
     """Stops the global HttpClient instance."""
     global http_client_instance
     if http_client_instance:
-        logger.info("Stopping global HttpClient instance.")
+        if settings_manager and settings_manager.dev_mode_enabled:
+            logger.info("Stopping global HttpClient instance.")
         http_client_instance.stop()
         http_client_instance = None
     else:
-        logger.info("Global HttpClient instance not found or already stopped.")
+        if settings_manager and settings_manager.dev_mode_enabled:
+            logger.info("Global HttpClient instance not found or already stopped.")

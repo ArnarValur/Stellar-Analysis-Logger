@@ -18,10 +18,8 @@ class DataHandler:
     """
     def __init__(self, settings: SettingsManager, http_client: HttpClient, plugin_name: str, plugin_version: str):
         """Initializes the DataHandler with settings and HTTP client."""
-        logger.info("Initializing DataHandler...")
         self.settings = settings
         self.http_client = http_client
-        logger.info("DataHandler initialized.")
 
     # Processes a single journal entry and builds the appropriate payload.
     def process_journal_entry(self, entry: Dict[str, Any], cmdr_name: str):
@@ -36,8 +34,8 @@ class DataHandler:
         if event_name not in RELEVANT_EVENTS:
             return
         
-        # Log the debugging event processing TODO: remove or adjust log level in production
-        logger.info(f"Processing relevant event: {event_name} for CMDR {cmdr_name}")
+        if self.settings.dev_mode_enabled:
+            logger.info(f"Processing relevant event: {event_name} for CMDR {cmdr_name}")
 
         # Build the payload based on the event type
         payload = None
@@ -60,36 +58,22 @@ class DataHandler:
         # If payload is built, send it to the API
         if payload:
             if not self.settings.api_url:
-                logger.warning("API URL is not configured. Cannot send data.")
-                try:
-                    payload_logger.info(f"Payload (not sent - API URL missing): {json.dumps(payload, indent=2)}")
-                except Exception as e:
-                    logger.error(f"Error logging payload to dedicated file: {e}", exc_info=True)
+                logger.warning("API URL not configured. Cannot send payload.")
                 return
             
-            # Log the payload to the dedicated file for debugging TODO: remove for production
-            logger.debug(f"Prepared payload for {payload.get('event_type')}: {payload}")
-            try:
-                payload_logger.info(json.dumps(payload, indent=2))
-            except Exception as e:
-                logger.error(f"Error logging payload to dedicated file: {e}", exc_info=True)
-            
-            # Construct the full API URL with the /exploration/events suffix
-            endpoint_suffix = "exploration/events"
-            full_api_url = f"{self.settings.api_url.rstrip('/')}/{endpoint_suffix.lstrip('/')}"
-            
+            if self.settings.dev_mode_enabled:
+                payload_logger.debug(f"Prepared payload for {payload.get('event_type')}: {payload}")
             self.http_client.send_json_post_request(
-                url=full_api_url,
-                payload=[payload],
-                api_key=self.settings.api_key,
-                callback=self._handle_api_response
+                url=self.settings.api_url, 
+                payload=payload, 
+                api_key=self.settings.api_key
             )
         else:
-            logger.debug(f"No payload generated for event: {event_name}")
+            if self.settings.dev_mode_enabled:
+                logger.debug(f"No payload built for event: {event_name}")
 
     # Builds the payload for SystemEntry events from FSDJump or CarrierJump
     def _build_system_entry_payload(self, entry: Dict[str, Any], cmdr_name: str, timestamp: str) -> Optional[Dict[str, Any]]:
-        logger.debug("Building SystemEntry payload (from FSDJump)...")
         payload = {
             'commander_name': cmdr_name,
             'event_timestamp': timestamp,
@@ -109,7 +93,6 @@ class DataHandler:
 
     # Builds the payload for Scan events
     def _build_scan_payload(self, entry: Dict[str, Any], cmdr_name: str, timestamp: str) -> Optional[Dict[str, Any]]:
-        logger.debug("Building Scan payload...")
         event_subtype = None
         
         if entry.get('StarType'):
@@ -125,7 +108,6 @@ class DataHandler:
                         break
         
         if not event_subtype:
-            logger.debug(f"Scan event for BodyName '{entry.get('BodyName')}' did not match known scan subtypes. Skipping.")
             return None
 
         payload = {
@@ -148,7 +130,6 @@ class DataHandler:
         }
 
         if event_subtype == 'StellarBodyScan':
-            logger.debug(f"StellarBodyScan detected for {entry.get('BodyName')}")
             scan_data.update({
                 'StarType': entry.get('StarType'),
                 'Subclass': entry.get('Subclass'),
@@ -173,7 +154,6 @@ class DataHandler:
                 })
         
         elif event_subtype == 'PlanetaryBodyScan':
-            logger.debug(f"PlanetaryBodyScan detected for {entry.get('BodyName')}")
             scan_data.update({
                 'PlanetClass': entry.get('PlanetClass'),
                 'TerraformState': entry.get('TerraformState'),
@@ -207,7 +187,6 @@ class DataHandler:
                 })
 
         elif event_subtype == 'AsteroidClusterScan':
-            logger.debug(f"AsteroidClusterScan detected for {entry.get('BodyName')}")
             # Asteroid cluster specific data
             if entry.get('Parents'): 
                 scan_data['Parents'] = entry.get('Parents')
@@ -241,7 +220,6 @@ class DataHandler:
         Builds a SystemEntry payload from a CarrierJump event.
         The CarrierJump event provides destination system information.
         """
-        logger.debug("Building SystemEntry payload (from CarrierJump)...")
 
         payload = {
             'commander_name': cmdr_name,
@@ -263,7 +241,6 @@ class DataHandler:
 
     # Builds the payload for SAASignalsFound events
     def _build_saasignalsfound_payload(self, entry: Dict[str, Any], cmdr_name: str, timestamp: str) -> Optional[Dict[str, Any]]:
-        logger.debug("Building SAASignalsFoundEvent payload...")
         payload = {
             'commander_name': cmdr_name,
             'event_timestamp': timestamp,

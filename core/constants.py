@@ -20,6 +20,7 @@ RELEVANT_EVENTS = {'FSDJump', 'Scan', 'SAASignalsFound', 'CarrierJump'}
 DEFAULT_PLUGIN_ENABLED = False
 DEFAULT_API_URL = ""
 DEFAULT_API_KEY = ""
+DEFAULT_DEV_MODE_ENABLED = False
 
 # Logging specific
 LOG_FILE_NAME = "Stellar-Analysis-Logger.log"
@@ -28,6 +29,7 @@ LOG_FILE_NAME = "Stellar-Analysis-Logger.log"
 CONFIG_PLUGIN_ENABLED = "SAL_PluginEnabled"
 CONFIG_API_URL = "SAL_ApiUrl"
 CONFIG_API_KEY = "SAL_ApiKey"
+CONFIG_DEV_MODE_ENABLED = "SAL_DevModeEnabled"
 
 # Timers for http_client
 REQUEST_TIMEOUT_S = 10
