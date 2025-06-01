@@ -36,10 +36,10 @@ class HttpClient:
         # Regex for URL validation (Contribution: adapted from BGS-Tally's requestmanager.py)
         self._url_validator = re.compile(
             r'^(?:http|ftp)s?://'
-            r'(?:(?:[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?\.)+(?:[A-Z]{2,6}\.?|[A-Z0-9-]{2,}\.?)|'
+            r'(?:(?:[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?\\.)+(?:[A-Z]{2,6}\\.?|[A-Z0-9-]{2,}\\.?)|'
             r'localhost|'
-            r'\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})'
-            r'(?::\d+)?'
+            r'\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3})'
+            r'(?::\\d+)?'
             r'(?:/?|[/?]\\S+)$', re.IGNORECASE)
         if settings_manager and settings_manager.dev_mode_enabled:
             logger.info("HttpClient initialized.")
