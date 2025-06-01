@@ -63,10 +63,15 @@ class DataHandler:
             
             if self.settings.dev_mode_enabled:
                 payload_logger.debug(f"Prepared payload for {payload.get('event_type')}: {payload}")
+            
+            endpoint_suffix = "exploration/events"
+            full_api_url = f"{self.settings.api_url.rstrip('/')}/{endpoint_suffix.lstrip('/')}"
+            
             self.http_client.send_json_post_request(
-                url=self.settings.api_url, 
-                payload=payload, 
-                api_key=self.settings.api_key
+                url=full_api_url, 
+                payload=[payload], 
+                api_key=self.settings.api_key,
+                callback=self._handle_api_response
             )
         else:
             if self.settings.dev_mode_enabled:
