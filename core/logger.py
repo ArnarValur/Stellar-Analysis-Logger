@@ -1,6 +1,7 @@
 import logging
 import os
-from .constants import PLUGIN_NAME_FOR_LOGGING, LOG_FILE_NAME
+from datetime import datetime
+from .constants import PLUGIN_NAME_FOR_LOGGING
 
 logger = logging.getLogger(f"EDMC.{PLUGIN_NAME_FOR_LOGGING}")
 
@@ -22,16 +23,23 @@ def setup_logging(plugin_dir=None):
         logger.addHandler(console_handler)
 
         # File Handler (for the dedicated plugin log file)
-        if plugin_dir and LOG_FILE_NAME:
-            log_file_path = os.path.join(plugin_dir, LOG_FILE_NAME)
+        if plugin_dir:
             try:
-                file_handler = logging.FileHandler(log_file_path, mode='a')
+                # Create dated filename
+                current_date = datetime.now().strftime("%Y-%m-%d")
+                log_filename = f"{current_date}-{PLUGIN_NAME_FOR_LOGGING}.log"
+
+                # Logs directory
+                log_directory = os.path.join(plugin_dir, "logs")
+                os.makedirs(log_directory, exist_ok=True)
+
+                log_file_path = os.path.join(log_directory, log_filename)
+
+                file_handler = logging.FileHandler(log_file_path, mode='a', encoding='utf-8')
                 file_handler.setFormatter(log_formatter)
                 logger.addHandler(file_handler)
-                # This log is fine, it indicates where the log file is.
-                # logger.info(f"Dedicated logging to file: {log_file_path}") 
-                # However, to minimize production logs, we can consider removing or making it debug if not essential for all users
+                
             except Exception as e:
-                logger.error(f"Failed to set up dedicated file logging to {log_file_path}: {e}")
+                logger.error(f"Failed to set up dedicated file logging: {e}")
         else:
             logger.warning("Plugin directory or log file name not provided, dedicated file logging disabled.")
