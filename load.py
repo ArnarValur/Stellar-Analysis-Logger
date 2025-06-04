@@ -57,10 +57,10 @@ def plugin_stop():
         logger.info("Stopping DataHandler instance.")
         core.data_handler.data_handler_instance.cleanup()
         core.data_handler.data_handler_instance = None
-    if core.settings_manager.settings_manager:
+    if core.settings.settings_manager:
         logger.info("Stopping SettingsManager instance.")
-        core.settings_manager.settings_manager.cleanup()
-        core.settings_manager.settings_manager = None
+        core.settings.settings_manager.cleanup()
+        core.settings.settings_manager = None
     logger.info(f"Stopping plugin {PLUGIN_NAME_FULL} v{PLUGIN_VERSION}")
     pass
 
