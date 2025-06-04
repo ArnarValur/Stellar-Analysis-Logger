@@ -8,6 +8,7 @@ from .logger import logger
 from .payload_logger import payload_logger
 from .settings_manager import SettingsManager
 from .http_client import HttpClient
+from .system_lookup import SystemLookup
 from .utils import get_by_path 
 from .constants import RELEVANT_EVENTS
 
@@ -16,10 +17,11 @@ class DataHandler:
     Processes relevant journal events, extracts specified data, formats it into
     a JSON payload according to the reference structure, and sends it via the HttpClient.
     """
-    def __init__(self, settings: SettingsManager, http_client: HttpClient, plugin_name: str, plugin_version: str):
+    def __init__(self, settings: SettingsManager, http_client: HttpClient, system_lookup: SystemLookup, plugin_name: str, plugin_version: str):
         """Initializes the DataHandler with settings and HTTP client."""
         self.settings = settings
         self.http_client = http_client
+        self.system_lookup = system_lookup
 
     # Processes a single journal entry and builds the appropriate payload.
     def process_journal_entry(self, entry: Dict[str, Any], cmdr_name: str):
@@ -286,9 +288,9 @@ class DataHandler:
 data_handler_instance = None
 
 # Initializes the DataHandler singleton instance.
-def initialize_data_handler(settings: SettingsManager, http_client: HttpClient, plugin_name: str, plugin_version: str):
+def initialize_data_handler(settings: SettingsManager, http_client: HttpClient, system_lookup: SystemLookup, plugin_name: str, plugin_version: str):
     """Initializes the DataHandler singleton instance."""
     global data_handler_instance
     if data_handler_instance is None:
-        data_handler_instance = DataHandler(settings, http_client, plugin_name, plugin_version)
+        data_handler_instance = DataHandler(settings, http_client, system_lookup, plugin_name, plugin_version)
     return data_handler_instance

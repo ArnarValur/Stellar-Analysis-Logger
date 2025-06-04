@@ -17,6 +17,7 @@ venv/
 .idea/
 *.sublime-project
 *.sublime-workspace
+*.code-workspace
 
 # OS specific
 .DS_Store
@@ -24,3 +25,6 @@ Thumbs.db
 
 # Docs
 .docs
+
+# Tests
+tests/

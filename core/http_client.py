@@ -3,6 +3,7 @@ import re
 import queue
 import threading
 import time
+from typing import Optional, Any, Dict, Tuple
 import requests
 
 from .logger import logger
@@ -102,6 +103,50 @@ class HttpClient:
         request_item = SalRequest(url, payload, headers, callback)
         self._request_queue.put(request_item)
         logger.debug(f"Queued {request_item}")
+
+    # Sends a synchronous GET request.
+    def send_get_request_sync(self, url: str, params: Optional[Dict[str, Any]] = None, custom_headers: Optional[Dict[str, Any]] = None) -> Tuple[Optional[Any], Optional[int], Optional[str]]:
+        """Sends a synchronous GET request and returns the response data, status code, and error message."""
+        if not self._is_url_valid(url):
+            logger.error(f"Invalid URL for GET request: '{url}'")
+            return None, None, "Invalid URL provided"
+        
+        req_headers = {
+            "User-Agent": self.user_agent
+        }
+        if custom_headers:
+            req_headers.update(custom_headers)
+        
+        logger.debug(f"Sending synchronous GET request to {url} with params {params} and headers {req_headers}")
+        try:
+            response = requests.get(
+                url,
+                params=params,
+                headers=req_headers,
+                timeout=REQUEST_TIMEOUT_S
+            )
+            response.raise_for_status()
+            response_data = None
+            try:
+                response_data = response.json()
+            except ValueError:
+                logger.warning(f"Response from {url} was not valid JSON, returning text. Body: {response.text[:500]}")
+                response_data = response.text
+            
+            return response_data, response.status_code, None
+        
+        except requests.exceptions.HTTPError as e:
+            logger.error(f"HTTP error for {url}: {e}", exc_info=True)
+            return None, e.response.status_code if e.response else None, str(e)
+        except requests.exceptions.Timeout as e:
+            logger.error(f"Request timed out for {url}: {e}", exc_info=True)
+            return None, None, "Request timed out"
+        except requests.exceptions.RequestException as e:
+            logger.error(f"Request failed for {url}: {e}", exc_info=True)
+            return None, None, str(e)
+        except Exception as e:
+            logger.critical(f"Unexpected error in send_get_request_sync: {e}", exc_info=True)
+            return None, None, "Unexpected error occurred"
 
     # Worker method that processes requests from the queue.
     def _worker(self):

@@ -7,6 +7,9 @@ import core.http_client
 from core.data_handler import initialize_data_handler
 import core.data_handler 
 
+from core.system_lookup import initialize_system_lookup
+import core.system_lookup
+
 from core.ui_manager import UIManager
 from core.constants import PLUGIN_NAME_FULL, PLUGIN_VERSION
 from core.payload_logger import setup_payload_logging
@@ -36,18 +39,28 @@ def plugin_start3(plugin_dir):
     
     # Initialize http_client, this will log its own init messages based on dev mode
     initialize_http_client(PLUGIN_NAME_FULL, PLUGIN_VERSION)
+
+    # Initialize SystemLookup if enabled
+    if not core.settings_manager.settings_manager or not core.http_client.http_client_instance:
+        logger.critical("Cannot initialize SystemLookup: dependencies not met (SettingsManager or HttpClient).")
+        return f"{PLUGIN_NAME_FULL} - Dependency Init Error"
+    
+    initialize_system_lookup(
+        core.http_client.http_client_instance,
+        core.settings_manager.settings_manager,
+    )
     
     # Initialize data_handler, this will log its own init messages based on dev mode
     initialize_data_handler(
         core.settings_manager.settings_manager, 
         core.http_client.http_client_instance,
+        core.system_lookup.system_lookup_instance,
         PLUGIN_NAME_FULL, 
         PLUGIN_VERSION
     )
 
     # Make prefs_changed accessible to UIManager via plugin_globals
     plugin_globals['prefs_changed_callback'] = prefs_changed
-    
     ui_manager_instance = UIManager(core.settings_manager.settings_manager, plugin_globals)
     
     return PLUGIN_NAME_FULL

@@ -52,6 +52,17 @@ class UIManager:
         )
         dev_mode_checkbutton.grid(row=3, column=0, columnspan=2, sticky=tk.W, padx=5, pady=2)
 
-        nb.Label(frame, text="Note: Some settings may require an EDMC restart to take full effect.").grid(row=4, column=0, columnspan=2, sticky=tk.W, padx=5, pady=10)
+        # System Lookup Checkbutton
+        system_lookup_checkbutton = nb.Checkbutton(
+            frame,
+            text="Enable System Lookup",
+            variable=self.settings_manager.system_lookup_enabled_var,
+            onvalue=CheckStates.STATE_ON.value,
+            offvalue=CheckStates.STATE_OFF.value,
+            command=lambda: self.plugin_globals.prefs_changed_callback(cmdr, is_beta)
+        )
+        system_lookup_checkbutton.grid(row=4, column=0, columnspan=2, sticky=tk.W, padx=5, pady=2)
+
+        nb.Label(frame, text="Note: Some settings may require an EDMC restart to take full effect.").grid(row=5, column=0, columnspan=2, sticky=tk.W, padx=5, pady=10)
 
         return frame
