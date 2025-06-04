@@ -42,6 +42,7 @@ class HttpClient:
             r'(?:/?|[/?]\S+)$', re.IGNORECASE)
         logger.info("HttpClient initialized.")
 
+
     # Starts the HTTP client's worker thread if it is not already running.
     def start(self):
         """Starts the HTTP client's worker thread."""
@@ -53,6 +54,7 @@ class HttpClient:
             logger.info("HttpClient worker thread started.")
         else:
             logger.info("HttpClient worker thread already running.")
+
 
     # Stops the HTTP client's worker thread and cleans up resources.
     def stop(self):
@@ -74,12 +76,14 @@ class HttpClient:
             logger.info("HttpClient worker thread was not running or already stopped.")
         self._worker_thread = None
 
+
     # Validates the URL using a regex pattern.
     def _is_url_valid(self, url_string: str) -> bool:
         """Validates the provided URL string."""
         if not url_string or not isinstance(url_string, str):
             return False
         return self._url_validator.match(url_string) is not None
+
 
     # Sends a JSON POST request to the specified URL with the given payload and headers.
     def send_json_post_request(self, url: str, payload: dict, api_key: str = None, callback: callable = None):
@@ -103,6 +107,7 @@ class HttpClient:
         request_item = SalRequest(url, payload, headers, callback)
         self._request_queue.put(request_item)
         logger.debug(f"Queued {request_item}")
+
 
     # Sends a synchronous GET request.
     def send_get_request_sync(self, url: str, params: Optional[Dict[str, Any]] = None, custom_headers: Optional[Dict[str, Any]] = None) -> Tuple[Optional[Any], Optional[int], Optional[str]]:
@@ -147,6 +152,7 @@ class HttpClient:
         except Exception as e:
             logger.critical(f"Unexpected error in send_get_request_sync: {e}", exc_info=True)
             return None, None, "Unexpected error occurred"
+
 
     # Worker method that processes requests from the queue.
     def _worker(self):
@@ -227,6 +233,7 @@ class HttpClient:
 
         logger.info("HttpClient worker finished processing queue and is shutting down.")
 
+
 # Global instance of the HttpClient
 http_client_instance = None
 
@@ -241,6 +248,7 @@ def initialize_http_client(plugin_name: str, plugin_version: str):
     else:
         logger.info("Global HttpClient already initialized.")
     return http_client_instance
+
 
 # Function to stop the global HttpClient instance
 def stop_http_client():

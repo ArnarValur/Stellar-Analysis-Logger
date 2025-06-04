@@ -3,7 +3,7 @@ from enum import Enum
 # Plugin Information
 PLUGIN_NAME_FOR_LOGGING = "StellarAnalysisLogger"
 PLUGIN_NAME_FULL = "Stellar Analysis Logger"
-PLUGIN_VERSION = "0.2.0"
+PLUGIN_VERSION = "0.5.0"
 
 # Checkbox states for Tkinter UI elements
 class CheckStates(Enum):

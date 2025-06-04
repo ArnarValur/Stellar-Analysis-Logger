@@ -61,14 +61,27 @@ class SystemLookup:
         logger.debug(f"Checking if system '{system_name}' is known in EDSM.")
         return self._query_edsm(system_name)
     
+
+    # Placeholder for querying Spansh API (not implemented)
     def _query_spansh():
         spansh_result = False
         return spansh_result
 
+
+    # Placeholder for querying Spansh API (not implemented)
     def _query_edastro():
         edastro_result = False
         return edastro_result
-    
+
+
+    # Cleans up the SystemLookup resources.
+    def cleanup(self):
+        """Clean up resources used by SystemLookup."""
+        logger.debug("Cleaning up SystemLookup resources.")
+        self.http_client = None
+        self.settings_manager = None
+        pass
+
 # Global instance of SystemLookup
 system_lookup_instance = None
 

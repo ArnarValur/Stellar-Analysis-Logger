@@ -85,6 +85,8 @@ class SettingsManager:
         if dev_mode_enabled_value:
             logger.info("SettingsManager initialized.")
 
+
+    # Refresh internal properties from Tkinter variables
     def refresh_from_vars(self):
         """Update internal Python properties from Tkinter variables."""
 
@@ -97,6 +99,8 @@ class SettingsManager:
         if self.dev_mode_enabled:
             logger.debug(f"Settings refreshed. Plugin Enabled: {self.plugin_enabled}, Dev Mode: {self.dev_mode_enabled}, System Lookup Enabled: {self.system_lookup_enable}")
 
+
+    # Save the current settings to EDMC's config.
     def save(self):
         """Save the current settings to EDMC\'s config."""
         if self.dev_mode_enabled:
@@ -132,11 +136,19 @@ class SettingsManager:
         if self.dev_mode_enabled:
             logger.info("Plugin settings saved.")
 
+
+    # Getters for Tkinter variables to use in UI components
     def is_system_lookup_enabled(self):
         return self.system_lookup_enabled_var.get()
     
+    # Cleans up SettingsManager resources.
+    def cleanup(self):
+        """Cleans up the SettingsManager instance."""
+        logger.info("Cleaning up SettingsManager resources.")
+        pass
+
+
 # Global instance of the SettingsManager
-# This will be None until plugin_start creates it.
 settings_manager = None
 
 def initialize_settings():

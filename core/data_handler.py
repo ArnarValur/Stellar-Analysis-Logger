@@ -23,6 +23,7 @@ class DataHandler:
         self.http_client = http_client
         self.system_lookup = system_lookup
 
+
     # Processes a single journal entry and builds the appropriate payload.
     def process_journal_entry(self, entry: Dict[str, Any], cmdr_name: str):
         """Filters and processes a single journal entry."""
@@ -79,6 +80,7 @@ class DataHandler:
             if self.settings.dev_mode_enabled:
                 logger.debug(f"No payload built for event: {event_name}")
 
+
     # Builds the payload for SystemEntry events from FSDJump or CarrierJump
     def _build_system_entry_payload(self, entry: Dict[str, Any], cmdr_name: str, timestamp: str) -> Optional[Dict[str, Any]]:
         payload = {
@@ -97,6 +99,7 @@ class DataHandler:
             }
         }
         return payload
+
 
     # Builds the payload for Scan events
     def _build_scan_payload(self, entry: Dict[str, Any], cmdr_name: str, timestamp: str) -> Optional[Dict[str, Any]]:
@@ -221,6 +224,7 @@ class DataHandler:
         payload['data'] = scan_data
         return payload
 
+
     # Builds the payload for CarrierJump events
     def _build_carrier_jump_system_entry_payload(self, entry: Dict[str, Any], cmdr_name: str, timestamp: str) -> Optional[Dict[str, Any]]:
         """
@@ -246,6 +250,7 @@ class DataHandler:
         }
         return payload
 
+
     # Builds the payload for SAASignalsFound events
     def _build_saasignalsfound_payload(self, entry: Dict[str, Any], cmdr_name: str, timestamp: str) -> Optional[Dict[str, Any]]:
         payload = {
@@ -264,6 +269,7 @@ class DataHandler:
             }
         }
         return payload
+
 
     # Callback function to handle API responses
     def _handle_api_response(self, success: bool, response_data: Any, status_code: Optional[int]):
@@ -284,8 +290,20 @@ class DataHandler:
         else:
             logger.error(f"API request failed (Status: {status_code}). Response: {response_data}")
 
+
+    # Cleans up the DataHandler resources.
+    def cleanup(self):
+        """Cleans up the DataHandler instance."""
+        logger.info("Cleaning up DataHandler instance.")
+        self.settings = None
+        self.http_client = None
+        self.system_lookup = None
+        pass
+
+
 # Global instance of DataHandler
 data_handler_instance = None
+
 
 # Initializes the DataHandler singleton instance.
 def initialize_data_handler(settings: SettingsManager, http_client: HttpClient, system_lookup: SystemLookup, plugin_name: str, plugin_version: str):
