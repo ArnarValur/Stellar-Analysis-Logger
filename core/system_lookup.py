@@ -1,4 +1,4 @@
-import urllib
+import urllib.parse
 import json
 from typing import Dict, Any, Optional
 
@@ -28,6 +28,9 @@ class SystemLookup:
         }
 
         logger.debug(f"Querying EDSM for system: {system_name}")
+        if self.http_client is None:
+            logger.error("HttpClient is None, cannot query EDSM.")
+            return False
         response_data, status_code, error_message = self.http_client.send_get_request_sync(
             EDSM_API_SYSTEM_URL,
             params=params,
@@ -54,6 +57,9 @@ class SystemLookup:
     # Checks if a system is known in EDSM.
     def is_system_known_edsm(self, system_name: str) -> bool:
         """Check if a system is known in EDSM."""
+        if self.settings_manager is None:
+            logger.error("SettingsManager is None, cannot check system lookup.")
+            return False
         if not self.settings_manager.is_system_lookup_enabled():
             logger.debug("System lookup is disabled, skipping EDSM query.")
             return False
@@ -63,13 +69,13 @@ class SystemLookup:
     
 
     # Placeholder for querying Spansh API (not implemented)
-    def _query_spansh():
+    def _query_spansh(self):
         spansh_result = False
         return spansh_result
 
 
     # Placeholder for querying Spansh API (not implemented)
-    def _query_edastro():
+    def _query_edastro(self):
         edastro_result = False
         return edastro_result
 

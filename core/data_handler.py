@@ -19,14 +19,17 @@ class DataHandler:
     """
     def __init__(self, settings: SettingsManager, http_client: HttpClient, system_lookup: SystemLookup, plugin_name: str, plugin_version: str):
         """Initializes the DataHandler with settings and HTTP client."""
-        self.settings = settings
-        self.http_client = http_client
+        self.settings: Optional[SettingsManager] = settings
+        self.http_client: Optional[HttpClient] = http_client
         self.system_lookup = system_lookup
 
 
     # Processes a single journal entry and builds the appropriate payload.
     def process_journal_entry(self, entry: Dict[str, Any], cmdr_name: str):
         """Filters and processes a single journal entry."""
+        if self.settings is None or self.http_client is None:
+            logger.error("DataHandler settings or http_client is None.")
+            return
         event_name = entry.get('event')
 
         # Check if the plugin is enabled and if the event is relevant
@@ -72,7 +75,7 @@ class DataHandler:
             
             self.http_client.send_json_post_request(
                 url=full_api_url, 
-                payload=[payload], 
+                payload=payload,  # FIX: pass dict, not list
                 api_key=self.settings.api_key,
                 callback=self._handle_api_response
             )

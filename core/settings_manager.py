@@ -94,10 +94,10 @@ class SettingsManager:
         self.api_url = self.api_url_var.get()
         self.api_key = self.api_key_var.get()
         self.dev_mode_enabled = self.dev_mode_enabled_var.get()
-        self.system_lookup_enable = self.system_lookup_enabled_var.get()
+        self.system_lookup_enabled = self.system_lookup_enabled_var.get()
 
         if self.dev_mode_enabled:
-            logger.debug(f"Settings refreshed. Plugin Enabled: {self.plugin_enabled}, Dev Mode: {self.dev_mode_enabled}, System Lookup Enabled: {self.system_lookup_enable}")
+            logger.debug(f"Settings refreshed. Plugin Enabled: {self.plugin_enabled}, Dev Mode: {self.dev_mode_enabled}, System Lookup Enabled: {self.system_lookup_enabled}")
 
 
     # Save the current settings to EDMC's config.
