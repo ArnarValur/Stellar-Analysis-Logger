@@ -3,7 +3,7 @@ import re
 import queue
 import threading
 import time
-from typing import Optional, Any, Dict, Tuple
+from typing import Optional, Any, Dict, Tuple, Callable
 import requests
 
 from .logger import logger
@@ -14,7 +14,7 @@ from .constants import (
 
 class SalRequest:
     """Encapsulates a request for the HttpClient."""
-    def __init__(self, url: str, payload: dict, headers: dict, callback: callable = None):
+    def __init__(self, url: str, payload: dict, headers: dict, callback: Optional[Callable] = None):
         self.url = url
         self.payload = payload
         self.headers = headers
@@ -86,7 +86,7 @@ class HttpClient:
 
 
     # Sends a JSON POST request to the specified URL with the given payload and headers.
-    def send_json_post_request(self, url: str, payload: dict, api_key: str = None, callback: callable = None):
+    def send_json_post_request(self, url: str, payload: dict, api_key: Optional[str] = None, callback: Optional[Callable[[bool, Optional[dict], Optional[int]], None]] = None):
         """Queues a JSON POST request."""
         if not self._is_url_valid(url):
             logger.error(f"Invalid URL for POST request: '{url}'")
