@@ -81,29 +81,38 @@ class DataHandler:
             )
         else:
             if self.settings.dev_mode_enabled:
-                logger.debug(f"No payload built for event: {event_name}")
-
-
-    # Builds the payload for SystemEntry events from FSDJump or CarrierJump
+                logger.debug(f"No payload built for event: {event_name}")    # Builds the payload for SystemEntry events from FSDJump or CarrierJump
     def _build_system_entry_payload(self, entry: Dict[str, Any], cmdr_name: str, timestamp: str) -> Optional[Dict[str, Any]]:
+        system_name = entry.get('StarSystem', '')
+        system_address = entry.get('SystemAddress', 0)
+        original_was_discovered = entry.get('WasDiscovered')
+        
+        # Enhanced discovery check (if system_lookup is available)
+        if self.system_lookup:
+            was_discovered, discovery_source = self.system_lookup.check_system_discovery_status(
+                system_name, system_address, original_was_discovered
+            )
+        else:
+            was_discovered = original_was_discovered
+            discovery_source = "journal"
+        
         payload = {
             'commander_name': cmdr_name,
             'event_timestamp': timestamp,
             'event_type': 'SystemEntry',
-            'system_address': entry.get('SystemAddress'),
+            'system_address': system_address,
             'data': {
-                'SystemAddress': entry.get('SystemAddress'),
-                'StarSystem': entry.get('StarSystem'),
+                'SystemAddress': system_address,
+                'StarSystem': system_name,
                 'StarPos': entry.get('StarPos'),
-                'WasDiscovered': entry.get('WasDiscovered'),
+                'WasDiscovered': was_discovered,
+                'DiscoverySource': discovery_source,  # Additional metadata
                 'BodyName': entry.get('Body'),
                 'BodyID': entry.get('BodyID'),
                 'Commander': cmdr_name
             }
         }
         return payload
-
-
     # Builds the payload for Scan events
     def _build_scan_payload(self, entry: Dict[str, Any], cmdr_name: str, timestamp: str) -> Optional[Dict[str, Any]]:
         event_subtype = None
@@ -123,11 +132,24 @@ class DataHandler:
         if not event_subtype:
             return None
 
+        # Enhanced discovery check for the system
+        system_name = entry.get('StarSystem')  # This might not be in Scan events
+        system_address = entry.get('SystemAddress', 0)
+        original_was_discovered = entry.get('WasDiscovered')
+        
+        if self.system_lookup and system_address:
+            was_discovered, discovery_source = self.system_lookup.check_system_discovery_status(
+                system_name or '', system_address, original_was_discovered
+            )
+        else:
+            was_discovered = original_was_discovered
+            discovery_source = "journal"
+
         payload = {
             'commander_name': cmdr_name,
             'event_timestamp': timestamp,
             'event_type': event_subtype,
-            'system_address': entry.get('SystemAddress'),
+            'system_address': system_address,
             'body_id': entry.get('BodyID'),
             'data': {}
         }
@@ -135,11 +157,12 @@ class DataHandler:
         scan_data = {
             'BodyName': entry.get('BodyName'),
             'BodyID': entry.get('BodyID'),
-            'SystemAddress': entry.get('SystemAddress'),
+            'SystemAddress': system_address,
             'DistanceFromArrivalLS': entry.get('DistanceFromArrivalLS'),
             'Commander': cmdr_name,
-            'WasDiscovered': entry.get('WasDiscovered'),
-            'WasMapped': entry.get('WasMapped')
+            'WasDiscovered': was_discovered,
+            'WasMapped': entry.get('WasMapped'),
+            'DiscoverySource': discovery_source  # Additional metadata
         }
 
         if event_subtype == 'StellarBodyScan':
@@ -226,25 +249,35 @@ class DataHandler:
         
         payload['data'] = scan_data
         return payload
-
-
     # Builds the payload for CarrierJump events
     def _build_carrier_jump_system_entry_payload(self, entry: Dict[str, Any], cmdr_name: str, timestamp: str) -> Optional[Dict[str, Any]]:
         """
         Builds a SystemEntry payload from a CarrierJump event.
         The CarrierJump event provides destination system information.
         """
+        system_name = entry.get('StarSystem', '')
+        system_address = entry.get('SystemAddress', 0)
+        
+        # Enhanced discovery check
+        if self.system_lookup:
+            was_discovered, discovery_source = self.system_lookup.check_system_discovery_status(
+                system_name, system_address, None
+            )
+        else:
+            was_discovered = None
+            discovery_source = "journal"
 
         payload = {
             'commander_name': cmdr_name,
             'event_timestamp': timestamp,
             'event_type': 'SystemEntry',
-            'system_address': entry.get('SystemAddress'),
+            'system_address': system_address,
             'data': {
-                'SystemAddress': entry.get('SystemAddress'),
-                'StarSystem': entry.get('StarSystem'),
+                'SystemAddress': system_address,
+                'StarSystem': system_name,
                 'StarPos': entry.get('StarPos'),
-                'WasDiscovered': None,
+                'WasDiscovered': was_discovered,
+                'DiscoverySource': discovery_source,
                 'BodyName': entry.get('Body'),
                 'BodyID': entry.get('BodyID'),
                 'BodyType': entry.get('BodyType'),
@@ -252,22 +285,35 @@ class DataHandler:
             }
         }
         return payload
-
-
     # Builds the payload for SAASignalsFound events
     def _build_saasignalsfound_payload(self, entry: Dict[str, Any], cmdr_name: str, timestamp: str) -> Optional[Dict[str, Any]]:
+        system_address = entry.get('SystemAddress', 0)
+        
+        # Enhanced discovery check for the system (if possible)
+        # Note: SAASignalsFound events typically don't include StarSystem name
+        # but we can still check with system_address if available
+        was_discovered = None
+        discovery_source = "journal"
+        
+        if self.system_lookup and system_address:
+            was_discovered, discovery_source = self.system_lookup.check_system_discovery_status(
+                '', system_address, None  # Empty system name since it's usually not in SAASignalsFound
+            )
+        
         payload = {
             'commander_name': cmdr_name,
             'event_timestamp': timestamp,
             'event_type': 'SAASignalsFoundEvent',
-            'system_address': entry.get('SystemAddress'),
+            'system_address': system_address,
             'body_id': entry.get('BodyID'),
             'data': {
                 'BodyName': entry.get('BodyName'),
                 'BodyID': entry.get('BodyID'),
-                'SystemAddress': entry.get('SystemAddress'),
+                'SystemAddress': system_address,
                 'Signals': entry.get('Signals', []),
                 'Genuses': entry.get('Genuses', []),
+                'WasDiscovered': was_discovered,
+                'DiscoverySource': discovery_source,
                 'Commander': cmdr_name
             }
         }

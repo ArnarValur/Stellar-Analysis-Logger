@@ -39,3 +39,5 @@ WORKER_SLEEP_S = 1
 
 # API endpoints for system lookup
 EDSM_API_SYSTEM_URL = "https://www.edsm.net/api-v1/system"
+SPANSH_API_SYSTEM_URL = "https://www.spansh.co.uk/api/system"
+EDASTRO_API_SYSTEM_URL = "https://edastro.com/api/starsystem"

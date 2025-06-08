@@ -1,5 +1,5 @@
 import tkinter as tk
-import myNotebook as nb
+import myNotebook as nb # type: ignore
 def _rc_menu_install(w):
     """Create a context sensitive menu for a text widget"""
     w.menu = tk.Menu(w, tearoff=0)

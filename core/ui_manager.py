@@ -1,5 +1,5 @@
 import tkinter as tk
-import myNotebook as nb
+import myNotebook as nb # type: ignore
 
 from tkinter import ttk
 from .constants import CheckStates, PLUGIN_NAME_FOR_LOGGING
