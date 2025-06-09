@@ -161,12 +161,11 @@ class HttpClient:
                     if request_item: self._request_queue.task_done()
                     break
 
-                PluginLogger.logger.info(f"Processing {request_item}")
                 response = None
                 try:
                     response = requests.post(
                         request_item.url,
-                        json=request_item.payload,
+                        json=[request_item.payload],
                         headers=request_item.headers,
                         timeout=HttpClientTimers.REQUEST_TIMEOUT_S
                     )
@@ -181,11 +180,12 @@ class HttpClient:
                         response_data = response.text
 
                     if request_item.callback:
+                        PluginLogger.logger.debug(f"Invoking callback for {request_item.url} with success=True")
                         request_item.callback(True, response_data, response.status_code)
 
                 except requests.exceptions.HTTPError as e:
                     PluginLogger.logger.error(
-                        f"Caught HTTPError in _worker. Type: {type(e).__name__}. Exception: {str(e)}. Has response attribute: {hasattr(e, 'response')}. Response object: {e.response}",
+                        f"Caught HTTPError in _worker. Type: {type(e).__name__}. Exception: {str(e)}. Has response attribute: {hasattr(e, 'response')}. Response object: {e.response}. Callback present: {request_item.callback is not None}",
                         exc_info=True
                     )
 
@@ -193,6 +193,7 @@ class HttpClient:
                     PluginLogger.logger.info(f"Original format log would be: {original_err_msg} - Response: {e.response.text if e.response else 'No response text'}") 
                     
                     if request_item.callback:
+                        PluginLogger.logger.debug(f"Invoking callback for {request_item.url} with success=False due to HTTPError. Callback: {request_item.callback}")
                         error_payload_http = {
                             "error_origin": "HTTPError_Block",
                             "exception_type": type(e).__name__,
@@ -204,13 +205,15 @@ class HttpClient:
                         request_item.callback(False, error_payload_http, e.response.status_code if e.response else None)
                 
                 except requests.exceptions.Timeout as e:
-                    PluginLogger.logger.error(f"Request timed out for {request_item.url}. Type: {type(e).__name__}. Exception: {str(e)}", exc_info=True)
+                    PluginLogger.logger.error(f"Request timed out for {request_item.url}. Type: {type(e).__name__}. Exception: {str(e)}. Callback present: {request_item.callback is not None}", exc_info=True)
                     if request_item.callback:
+                        PluginLogger.logger.debug(f"Invoking callback for {request_item.url} with success=False due to Timeout. Callback: {request_item.callback}")
                         request_item.callback(False, {"error_origin": "Timeout_Block", "error": "Request timed out", "exception_type": type(e).__name__, "exception_message": str(e)}, None)
                 
                 except requests.exceptions.RequestException as e:
-                    PluginLogger.logger.error(f"Request failed for {request_item.url}. Type: {type(e).__name__}. Exception: {str(e)}", exc_info=True)
+                    PluginLogger.logger.error(f"Request failed for {request_item.url}. Type: {type(e).__name__}. Exception: {str(e)}. Callback present: {request_item.callback is not None}", exc_info=True)
                     if request_item.callback:
+                        PluginLogger.logger.debug(f"Invoking callback for {request_item.url} with success=False due to RequestException. Callback: {request_item.callback}")
                         error_payload_req = {
                             "error_origin": "RequestException_Block",
                             "exception_type": type(e).__name__,
@@ -220,6 +223,7 @@ class HttpClient:
                 
                 finally:
                     self._request_queue.task_done()
+                    PluginLogger.logger.debug(f"Finished processing {request_item}. task_done() called.")
 
             except queue.Empty:
                 continue

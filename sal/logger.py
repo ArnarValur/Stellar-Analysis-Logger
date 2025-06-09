@@ -8,7 +8,7 @@ from sal.constants import PluginInfo
 class PluginLogger:
     def __init__(self, sal, plugin_dir=None):
         self.logger = PluginLogger.logger = logging.getLogger(f"EDMC.{PluginInfo.PLUGIN_NAME_FOR_LOGGING}")
-        PluginLogger.logger.setLevel(logging.INFO)
+        PluginLogger.logger.setLevel(logging.DEBUG)
         
         self.payload_logger = None  # Initialize payload_logger attribute
 

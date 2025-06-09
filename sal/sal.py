@@ -39,6 +39,7 @@ class Sal:
         
         # Initialize HTTP client
         self.http_client = HttpClient(plugin_name=PluginInfo.PLUGIN_NAME, plugin_version=self.version)
+        self.http_client.start() # START THE HTTP CLIENT WORKER THREAD
 
         # Initialize SystemLookup
         self.system_lookup = SystemLookup(http_client=self.http_client, settings=self.settings)
