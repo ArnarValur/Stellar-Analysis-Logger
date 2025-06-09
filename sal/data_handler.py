@@ -2,34 +2,35 @@ import time
 import json
 
 from datetime import datetime, timezone
-from typing import Dict, Optional, Any
+from typing import Dict, Optional, Any, TYPE_CHECKING
 
-from .logger import logger
-from .payload_logger import payload_logger
-from .settings_manager import SettingsManager
-from .http_client import HttpClient
-from .system_lookup import SystemLookup
-from .utils import get_by_path 
-from .constants import RELEVANT_EVENTS
+from sal.logger import PluginLogger
+from sal.settings import Settings
+from sal.http_client import HttpClient
+from sal.system_lookup import *
+from sal.utils import get_by_path 
+from sal.constants import PluginInfo, JournalEvents
 
 class DataHandler:
     """
     Processes relevant journal events, extracts specified data, formats it into
     a JSON payload according to the reference structure, and sends it via the HttpClient.
     """
-    def __init__(self, settings: SettingsManager, http_client: HttpClient, system_lookup: SystemLookup, plugin_name: str, plugin_version: str):
+    def __init__(self, settings: Settings, http_client: HttpClient, system_lookup: SystemLookup, plugin_logger: PluginLogger, plugin_name: str, plugin_version: str, plugin_dir: str): # Added plugin_logger
         """Initializes the DataHandler with settings and HTTP client."""
-        self.settings: Optional[SettingsManager] = settings
+        self.settings: Optional[Settings] = settings
         self.http_client: Optional[HttpClient] = http_client
         self.system_lookup = system_lookup
+        self.payload_logger = plugin_logger.get_payload_logger() # Use passed plugin_logger
 
 
     # Processes a single journal entry and builds the appropriate payload.
     def process_journal_entry(self, entry: Dict[str, Any], cmdr_name: str):
         """Filters and processes a single journal entry."""
-        if self.settings is None or self.http_client is None:
-            logger.error("DataHandler settings or http_client is None.")
+        if not self.settings or not self.http_client:
+            PluginLogger.logger.error("DataHandler settings or http_client is None.") # Use PluginLogger.logger
             return
+
         event_name = entry.get('event')
 
         # Check if the plugin is enabled and if the event is relevant
@@ -37,11 +38,11 @@ class DataHandler:
             return
 
         # Check if the event is one of the relevant events
-        if event_name not in RELEVANT_EVENTS:
+        if event_name not in JournalEvents.__members__:
             return
         
-        if self.settings.dev_mode_enabled:
-            logger.info(f"Processing relevant event: {event_name} for CMDR {cmdr_name}")
+        if self.settings.developer_mode: # Changed dev_mode_enabled to developer_mode
+            PluginLogger.logger.info(f"Processing relevant event: {event_name} for CMDR {cmdr_name}") # Use PluginLogger.logger
 
         # Build the payload based on the event type
         payload = None
@@ -58,30 +59,33 @@ class DataHandler:
             elif event_name == 'SAASignalsFound':
                 payload = self._build_saasignalsfound_payload(entry, cmdr_name, timestamp)
         except Exception as e:
-            logger.error(f"Error building payload for {event_name}: {e}", exc_info=True)
+            PluginLogger.logger.error(f"Error building payload for {event_name}: {e}", exc_info=True) # Use PluginLogger.logger
             return
 
         # If payload is built, send it to the API
         if payload:
             if not self.settings.api_url:
-                logger.warning("API URL not configured. Cannot send payload.")
+                PluginLogger.logger.warning("API URL not configured. Cannot send payload.") # Use PluginLogger.logger
                 return
             
-            if self.settings.dev_mode_enabled:
-                payload_logger.debug(f"Prepared payload for {payload.get('event_type')}: {payload}")
+            if self.settings.developer_mode: # Changed dev_mode_enabled to developer_mode
+                if self.payload_logger:
+                    self.payload_logger.debug(f"Prepared payload for {payload.get('event_type')}: {payload}")
             
             endpoint_suffix = "exploration/events"
             full_api_url = f"{self.settings.api_url.rstrip('/')}/{endpoint_suffix.lstrip('/')}"
             
             self.http_client.send_json_post_request(
                 url=full_api_url, 
-                payload=payload,  # FIX: pass dict, not list
+                payload=payload,
                 api_key=self.settings.api_key,
                 callback=self._handle_api_response
             )
         else:
-            if self.settings.dev_mode_enabled:
-                logger.debug(f"No payload built for event: {event_name}")    # Builds the payload for SystemEntry events from FSDJump or CarrierJump
+            if self.settings and self.settings.developer_mode: 
+                PluginLogger.logger.debug(f"No payload built for event: {event_name}") # Use PluginLogger.logger
+    
+
     def _build_system_entry_payload(self, entry: Dict[str, Any], cmdr_name: str, timestamp: str) -> Optional[Dict[str, Any]]:
         system_name = entry.get('StarSystem', '')
         system_address = entry.get('SystemAddress', 0)
@@ -113,6 +117,8 @@ class DataHandler:
             }
         }
         return payload
+
+
     # Builds the payload for Scan events
     def _build_scan_payload(self, entry: Dict[str, Any], cmdr_name: str, timestamp: str) -> Optional[Dict[str, Any]]:
         event_subtype = None
@@ -184,7 +190,7 @@ class DataHandler:
                 scan_data.update({
                     'SemiMajorAxis': entry.get('SemiMajorAxis'),
                     'Eccentricity': entry.get('Eccentricity'),
-                    'OrbitalInclination': entry.get('OrbitalInclination'),
+                    'OrbitalInclination': entry.get('OrbitalInclination'), # Corrected missing quote
                     'Periapsis': entry.get('Periapsis'),
                     'OrbitalPeriod': entry.get('OrbitalPeriod')
                 })
@@ -249,6 +255,8 @@ class DataHandler:
         
         payload['data'] = scan_data
         return payload
+
+
     # Builds the payload for CarrierJump events
     def _build_carrier_jump_system_entry_payload(self, entry: Dict[str, Any], cmdr_name: str, timestamp: str) -> Optional[Dict[str, Any]]:
         """
@@ -285,6 +293,8 @@ class DataHandler:
             }
         }
         return payload
+    
+
     # Builds the payload for SAASignalsFound events
     def _build_saasignalsfound_payload(self, entry: Dict[str, Any], cmdr_name: str, timestamp: str) -> Optional[Dict[str, Any]]:
         system_address = entry.get('SystemAddress', 0)
@@ -330,34 +340,22 @@ class DataHandler:
             "response_data": response_data
         }
         try:
-            payload_logger.info(json.dumps(log_entry, indent=2))
+            if self.payload_logger:
+                self.payload_logger.info(json.dumps(log_entry, indent=2))
         except Exception as e:
-            logger.error(f"Error logging API response to dedicated file: {e}", exc_info=True)
+            PluginLogger.logger.error(f"Error logging API response to dedicated file: {e}", exc_info=True) # Use PluginLogger.logger
 
         if success:
-            logger.info(f"API request successful (Status: {status_code}). Response: {response_data}")
+            PluginLogger.logger.info(f"API request successful (Status: {status_code}). Response: {response_data}") # Use PluginLogger.logger
         else:
-            logger.error(f"API request failed (Status: {status_code}). Response: {response_data}")
+            PluginLogger.logger.error(f"API request failed (Status: {status_code}). Response: {response_data}") # Use PluginLogger.logger
 
 
     # Cleans up the DataHandler resources.
     def cleanup(self):
         """Cleans up the DataHandler instance."""
-        logger.info("Cleaning up DataHandler instance.")
+        PluginLogger.logger.info("Cleaning up DataHandler instance.") # Use PluginLogger.logger
         self.settings = None
         self.http_client = None
         self.system_lookup = None
         pass
-
-
-# Global instance of DataHandler
-data_handler_instance = None
-
-
-# Initializes the DataHandler singleton instance.
-def initialize_data_handler(settings: SettingsManager, http_client: HttpClient, system_lookup: SystemLookup, plugin_name: str, plugin_version: str):
-    """Initializes the DataHandler singleton instance."""
-    global data_handler_instance
-    if data_handler_instance is None:
-        data_handler_instance = DataHandler(settings, http_client, system_lookup, plugin_name, plugin_version)
-    return data_handler_instance

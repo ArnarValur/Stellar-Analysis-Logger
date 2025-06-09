@@ -10,8 +10,8 @@ class PluginInfo:
 
 # Checkbox states for Tkinter UI elements
 class CheckSettings(str, Enum):
-    SETTINGS_OFF = False
-    SETTINGS_ON = True
+    SETTINGS_OFF = "False"
+    SETTINGS_ON = "True"
 
 # Date/Time format for payloads
 class DateTimeFormat:
@@ -28,8 +28,8 @@ class JournalEvents(Enum):
 # Default settings values
 class DefaultSettings:
     PLUGIN_ENABLED = False
-    API_URL = "https://api.example.com"
-    API_KEY = "your_api_key_here"
+    API_URL = ""
+    API_KEY = ""
     DEV_MODE_ENABLED = False    
     SYSTEM_LOOKUP_ENABLED = True
 
@@ -63,7 +63,7 @@ class RequestMethods(Enum):
     OPTIONS = "OPTIONS"
 
 # API endpoints for system lookup
-class ApiEndpoints:
+class SysLookApiEndpoints:
     EDSM_API_SYSTEM_URL = "https://www.edsm.net/api-v1/system"
     SPANSH_API_SYSTEM_URL = "https://www.spansh.co.uk/api/system"
     EDASTRO_API_SYSTEM_URL = "https://edastro.com/api/starsystem"
