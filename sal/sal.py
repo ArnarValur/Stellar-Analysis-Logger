@@ -31,11 +31,11 @@ class Sal:
         """
         The Plugin start method.
         """
-        self.logger: PluginLogger = PluginLogger(self, plugin_dir=plugin_dir)
-        self.logger.get_logger().info(f"sal.py: Starting plugin: {self.plugin_name} (v{self.version}) - Plugin started in directory {plugin_dir}") 
-
         # Initialize settings
         self.settings = Settings(self)
+        
+        # Initialize PluginLogger
+        self.logger: PluginLogger = PluginLogger(self, plugin_dir=plugin_dir)
         
         # Initialize HTTP client
         self.http_client = HttpClient(
@@ -72,19 +72,23 @@ class Sal:
 
         if self.settings:
             self.settings.save_settings()
-            PluginLogger.logger.info("Plugin settings saved.")
+            if self.settings.developer_mode:
+                PluginLogger.logger.info("Plugin settings saved.")
 
         if hasattr(self, 'http_client') and self.http_client:
             self.http_client.stop()
-            PluginLogger.logger.info("HTTP client stopped.")
+            if self.settings.developer_mode:
+                PluginLogger.logger.info("HTTP client stopped.")
 
         if hasattr(self, 'data_handler') and self.data_handler:
             self.data_handler.cleanup()
-            PluginLogger.logger.info("Data handler cleaned up.")
+            if self.settings.developer_mode:
+                PluginLogger.logger.info("Data handler cleaned up.")
 
         if hasattr(self, 'system_lookup') and self.system_lookup:
             self.system_lookup.cleanup()
-            PluginLogger.logger.info("System lookup cleaned up.")
+            if self.settings.developer_mode:
+                PluginLogger.logger.info("System lookup cleaned up.")
 
         PluginLogger.logger.info("Plugin stopped successfully.")
         return "Plugin stopped"

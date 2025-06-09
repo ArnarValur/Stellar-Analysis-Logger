@@ -22,7 +22,7 @@ class SalRequest:
 class HttpClient:
     """Handles asynchronous HTTP POST requests with JSON payloads."""
     def __init__(self, plugin_name: str, plugin_version: str):
-        PluginLogger.logger.info(f"Initializing HttpClient for {plugin_name} v{plugin_version}...")
+        PluginLogger.logger.debug(f"Initializing HttpClient for {plugin_name} v{plugin_version}...")
         self.user_agent = f"{plugin_name}/{plugin_version}"
         self._request_queue = queue.Queue()
         self._worker_thread = None
@@ -36,7 +36,6 @@ class HttpClient:
             r'\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})'
             r'(?::\d+)?'
             r'(?:/?|[/?]\S+)$', re.IGNORECASE)
-        PluginLogger.logger.info("HttpClient initialized.")
 
 
     # Starts the HTTP client's worker thread if it is not already running.
@@ -47,7 +46,6 @@ class HttpClient:
             self._worker_thread = threading.Thread(target=self._worker, name="SAL-HttpClientWorker")
             self._worker_thread.daemon = True
             self._worker_thread.start()
-            PluginLogger.logger.info("HttpClient worker thread started.")
         else:
             PluginLogger.logger.info("HttpClient worker thread already running.")
 
@@ -55,7 +53,6 @@ class HttpClient:
     # Stops the HTTP client's worker thread and cleans up resources.
     def stop(self):
         """Stops the HTTP client's worker thread."""
-        PluginLogger.logger.info("Attempting to stop HttpClient worker thread...")
         self._shutdown_event.set()
         if self._worker_thread and self._worker_thread.is_alive():
             try:
@@ -118,7 +115,7 @@ class HttpClient:
         if custom_headers:
             req_headers.update(custom_headers)
         
-        PluginLogger.logger.debug(f"Sending synchronous GET request to {url} with params {params} and headers {req_headers}")
+        PluginLogger.logger.info(f"Sending synchronous GET request to {url} with params {params} and headers {req_headers}")
         try:
             response = requests.get(
                 url,
@@ -152,7 +149,6 @@ class HttpClient:
 
     # Worker method that processes requests from the queue.
     def _worker(self):
-        PluginLogger.logger.info("HttpClient worker started processing queue.")
         while not self._shutdown_event.is_set():
             try:
                 request_item = self._request_queue.get(timeout=HttpClientTimers.WORKER_SLEEP_S)
@@ -171,7 +167,7 @@ class HttpClient:
                     )
                     response.raise_for_status()
                     
-                    PluginLogger.logger.info(f"Request to {request_item.url} successful (Status: {response.status_code}).")
+                    PluginLogger.logger.debug(f"Request to {request_item.url} successful (Status: {response.status_code}).")
                     response_data = None
                     try:
                         response_data = response.json()
@@ -190,7 +186,7 @@ class HttpClient:
                     )
 
                     original_err_msg = f"HTTP error for {request_item.url}: {e.response.status_code if e.response else 'N/A'}"
-                    PluginLogger.logger.info(f"Original format log would be: {original_err_msg} - Response: {e.response.text if e.response else 'No response text'}") 
+                    PluginLogger.logger.debug(f"Original format log would be: {original_err_msg} - Response: {e.response.text if e.response else 'No response text'}") 
                     
                     if request_item.callback:
                         PluginLogger.logger.debug(f"Invoking callback for {request_item.url} with success=False due to HTTPError. Callback: {request_item.callback}")
@@ -231,4 +227,5 @@ class HttpClient:
                 PluginLogger.logger.critical(f"Unexpected critical error in HttpClient worker: {e}", exc_info=True)
                 time.sleep(HttpClientTimers.WORKER_SLEEP_S * 5)
 
-        PluginLogger.logger.info("HttpClient worker finished processing queue and is shutting down.")
+        if PluginLogger._developer_mode:
+            PluginLogger.logger.info("HttpClient worker finished processing queue and is shutting down.")

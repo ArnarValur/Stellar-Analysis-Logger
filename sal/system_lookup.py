@@ -221,7 +221,8 @@ class SystemLookup:
 
     def cleanup(self):
         """Clean up resources used by SystemLookup."""
-        PluginLogger.logger.debug("Cleaning up SystemLookup resources.")
+        if self.settings and self.settings.developer_mode:
+            PluginLogger.logger.info("Cleaning up SystemLookup resources.")
         self._discovery_cache.clear()
-        self.http_client = None  # Be careful about nullifying shared objects if they are managed elsewhere
-        self.settings = None  # Same as above
+        self.http_client = None
+        self.settings = None

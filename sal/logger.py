@@ -6,11 +6,25 @@ from sal.constants import PluginInfo
 
 
 class PluginLogger:
+
+    _developer_mode: bool = False
+
     def __init__(self, sal, plugin_dir=None):
         self.logger = PluginLogger.logger = logging.getLogger(f"EDMC.{PluginInfo.PLUGIN_NAME_FOR_LOGGING}")
-        PluginLogger.logger.setLevel(logging.DEBUG)
+        PluginLogger.logger = self.logger
         
-        self.payload_logger = None  # Initialize payload_logger attribute
+        self.payload_logger = None
+
+        if hasattr(sal, 'settings') and sal.settings is not None:
+            PluginLogger._developer_mode = sal.settings.developer_mode
+            
+            if PluginLogger._developer_mode:
+                self.logger.setLevel(logging.DEBUG)
+            else:
+                self.logger.setLevel(logging.INFO)
+        else:
+            PluginLogger._developer_mode = False
+            self.logger.setLevel(logging.INFO)
 
         # Common formatter
         log_formatter = logging.Formatter(
@@ -42,13 +56,13 @@ class PluginLogger:
                 file_handler = logging.FileHandler(log_file_path, mode='a', encoding='utf-8')
                 file_handler.setFormatter(log_formatter)
                 self.logger.addHandler(file_handler)
-                self.logger.info(f"PluginLogger: File logging configured at {log_file_path}") # Diagnostic
-                self.setup_payload_logger(plugin_dir) # Ensure payload logger is setup
+                self.setup_payload_logger(plugin_dir)
             except Exception as e:
                 print(f"ERROR [PluginLogger]: Failed to set up dedicated file logging for {log_file_path if 'log_file_path' in locals() else 'UNKNOWN PATH'}: {e}")
                 self.logger.error(f"Failed to set up dedicated file logging: {e}", exc_info=True)
         else:
             self.logger.warning("PluginLogger: Plugin directory not provided, dedicated file logging disabled.")
+
 
     def setup_payload_logger(self, plugin_dir: str):
         """Sets up a dedicated logger for payloads."""
@@ -82,7 +96,6 @@ class PluginLogger:
             handler.setFormatter(formatter)
             self.payload_logger.addHandler(handler)
             self.payload_logger.propagate = False
-            self.logger.info(f"PluginLogger: Payload logging configured at {log_file_path}")
         except Exception as e:
             # Use the main logger for error reporting if it's available
             if self.logger and self.logger.handlers:
@@ -91,8 +104,18 @@ class PluginLogger:
                 # Fallback if the main logger itself isn't configured
                 print(f"CRITICAL [PluginLogger]: Failed to set up payload logging to {log_file_path}, and main logger has no handlers: {e}")
 
+
+    @classmethod
+    def is_developer_mode(cls) -> bool:
+        """
+        Check if the plugin is running in developer mode.
+        """
+        return cls._developer_mode
+    
+
     def get_logger(self):
         return self.logger
+
 
     def get_payload_logger(self):
         if not self.payload_logger:

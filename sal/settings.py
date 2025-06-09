@@ -16,10 +16,6 @@ class Settings:
         self.sal = sal
         self.load_settings()
 
-        if self.developer_mode:
-            # Example of using the logger passed from Sal instance
-            PluginLogger.logger.info(f"SAL [Settings]: Developer mode is ON. \nRaw settings values:\nPluginEnabled: {self.PluginEnabled.get()}\nAPIUrl: {self.APIUrl.get()}\nAPIKey: {self.APIKey.get()}\nDeveloperMode: {self.DeveloperMode.get()}\nSystemLookup: {self.SystemLookup.get()}")
-
 
     def load_settings(self):
         """
@@ -49,11 +45,6 @@ class Settings:
         self.SystemLookup:tk.StringVar = tk.StringVar(
             value=config.get_str(ConfigKeys.CONFIG_SYSTEM_LOOKUP, default=system_lookup_default_str)
         )
-
-        PluginLogger.logger.debug(f"Loading {ConfigKeys.CONFIG_PLUGIN}: config raw string was '{config.get_str(ConfigKeys.CONFIG_PLUGIN)}', effective string value = {self.PluginEnabled.get()}")
-        PluginLogger.logger.debug(f"Loading {ConfigKeys.CONFIG_DEV_MODE}: config raw string was '{config.get_str(ConfigKeys.CONFIG_DEV_MODE)}', effective string value = {self.DeveloperMode.get()}")
-        PluginLogger.logger.debug(f"Loading {ConfigKeys.CONFIG_SYSTEM_LOOKUP}: config raw string was '{config.get_str(ConfigKeys.CONFIG_SYSTEM_LOOKUP)}', effective string value = {self.SystemLookup.get()}")
-        
         self.refresh_settings()
 
 
@@ -77,6 +68,3 @@ class Settings:
         config.set(ConfigKeys.CONFIG_API_KEY, self.APIKey.get())
         config.set(ConfigKeys.CONFIG_DEV_MODE, str(self.DeveloperMode.get()))
         config.set(ConfigKeys.CONFIG_SYSTEM_LOOKUP, str(self.SystemLookup.get()))
-
-        # Ensure self.logger is used if logging is needed here
-        PluginLogger.logger.info("Saving SAL settings...")
