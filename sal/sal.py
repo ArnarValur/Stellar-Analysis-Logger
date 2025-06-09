@@ -62,12 +62,16 @@ class Sal:
         """
         The Plugin stop method.
         """
-        if self.logger: # Check if logger exists
-            self.logger.get_logger().info(f"Stopping plugin: {self.plugin_name} (v{self.version})")
-        if self.settings: # Check if settings exists
+        PluginLogger.logger.info(f"Stopping plugin: {self.plugin_name} (v{self.version})")
+
+        if self.settings:
             self.settings.save_settings()
-            if self.logger: # Check if logger exists
-                 self.logger.get_logger().info("Plugin settings saved.")
+            PluginLogger.logger.info("Plugin settings saved.")
+
+        if self.http_client:
+            self.http_client.stop()
+            PluginLogger.logger.info("HTTP client stopped.")
+
         return "Plugin stopped"
     
 
