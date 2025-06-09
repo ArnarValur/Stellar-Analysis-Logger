@@ -38,11 +38,17 @@ class Sal:
         self.settings = Settings(self)
         
         # Initialize HTTP client
-        self.http_client = HttpClient(plugin_name=PluginInfo.PLUGIN_NAME, plugin_version=self.version)
-        self.http_client.start() # START THE HTTP CLIENT WORKER THREAD
+        self.http_client = HttpClient(
+            plugin_name=PluginInfo.PLUGIN_NAME,
+            plugin_version=self.version
+        )
+        self.http_client.start()
 
         # Initialize SystemLookup
-        self.system_lookup = SystemLookup(http_client=self.http_client, settings=self.settings)
+        self.system_lookup = SystemLookup(
+            http_client=self.http_client,
+            settings=self.settings
+        )
 
         # Initialize DataHandler
         self.data_handler = DataHandler(
@@ -68,10 +74,19 @@ class Sal:
             self.settings.save_settings()
             PluginLogger.logger.info("Plugin settings saved.")
 
-        if self.http_client:
+        if hasattr(self, 'http_client') and self.http_client:
             self.http_client.stop()
             PluginLogger.logger.info("HTTP client stopped.")
 
+        if hasattr(self, 'data_handler') and self.data_handler:
+            self.data_handler.cleanup()
+            PluginLogger.logger.info("Data handler cleaned up.")
+
+        if hasattr(self, 'system_lookup') and self.system_lookup:
+            self.system_lookup.cleanup()
+            PluginLogger.logger.info("System lookup cleaned up.")
+
+        PluginLogger.logger.info("Plugin stopped successfully.")
         return "Plugin stopped"
     
 
