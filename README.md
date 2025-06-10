@@ -1,8 +1,8 @@
 # Stellar Analysis Logger
 
-**This plugin for Elite Dangerous Market Connector (EDMC) logs detailed exploration data and system information.**
+**This plugin for Elite Dangerous Market Connector (EDMC) logs detailed exploration data and system information into a database of mine.**
 
-This project is inspired by [BGS-Tally](https://github.com/aussig/BGS-Tally) by [aussig](https://github.com/aussig).
+This project is highly inspired from [BGS-Tally](https://github.com/aussig/BGS-Tally) by [aussig](https://github.com/aussig).
 
 ## Features
 
