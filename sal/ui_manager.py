@@ -5,10 +5,17 @@ from .constants import CheckSettings, PluginInfo
 from .widgets import EntryPlus
 
 class UIManager:
+    """
+    Manages the user interface for the plugin settings.
+    This class provides methods to create and manage the settings UI,
+    including enabling/disabling the plugin, setting API URLs, and toggling developer mode.
+    It uses the provided SAL instance to access settings and save changes.
+    """
     def __init__(self, sal):
         """Initializes the UIManager with the SAL instance."""
         self.sal = sal
         self.frame = None
+
 
     def get_settings_pref(self, parent_frame, cmdr, is_beta):
         """Creates the settings UI for the plugin."""

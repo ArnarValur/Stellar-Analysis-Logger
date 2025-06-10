@@ -1,5 +1,6 @@
 from typing import Any, Dict, List
 
+
 def get_by_path(dic: Dict[str, Any], keys: List[str], default: Any = None) -> Any:
     """Access a multi-level nested dict by a sequence of keys.
 

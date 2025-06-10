@@ -35,10 +35,10 @@ class DefaultSettings:
 
 # Logging specific
 class LoggingConfig:
-    LOG_LEVEL = "DEBUG"  # Options: DEBUG, INFO, WARNING, ERROR, CRITICAL
+    LOG_LEVEL = "DEBUG"
     LOG_FILE_PATH = "logs/"
-    LOG_FILE_SIZE_MB = 5  # Max size of log file before rotation
-    LOG_BACKUP_COUNT = 3  # Number of backup log files to keep
+    LOG_FILE_SIZE_MB = 5
+    LOG_BACKUP_COUNT = 3
 
 # Config keys for EDMC config
 class ConfigKeys:

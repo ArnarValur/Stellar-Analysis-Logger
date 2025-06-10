@@ -6,7 +6,11 @@ from sal.constants import PluginInfo
 
 
 class PluginLogger:
-
+    """
+    A logger for the EDMC plugin, providing logging capabilities for both the plugin and payloads.
+    This logger supports different logging levels and can log to both console and a dedicated file.
+    It also supports a separate payload logger for detailed payload logging.
+    """
     _developer_mode: bool = False
 
     def __init__(self, sal, plugin_dir=None):

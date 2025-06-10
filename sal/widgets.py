@@ -1,5 +1,7 @@
 import tkinter as tk
 import myNotebook as nb # type: ignore
+
+
 def _rc_menu_install(w):
     """Create a context sensitive menu for a text widget"""
     w.menu = tk.Menu(w, tearoff=0)
@@ -15,6 +17,7 @@ def _rc_menu_install(w):
     w.menu.entryconfigure("Select all", command=lambda: w.event_select_all(None)
     )
 
+
 class EntryPlus(nb.Entry):
     """
     Subclass of nb.Entry to install a context-sensitive menu on right-click
@@ -26,10 +29,12 @@ class EntryPlus(nb.Entry):
         self.bind_class("Entry", "<Control-A>", self.event_select_all)
         self.bind("<Button-3><ButtonRelease-3>", self.show_menu)
 
+
     def event_select_all(self, event):
         self.focus_force()
         self.selection_range(0, tk.END)
         return "break"
+
 
     def show_menu(self, e):
         self.menu.tk_popup(e.x_root, e.y_root)

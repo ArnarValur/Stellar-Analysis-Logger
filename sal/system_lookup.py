@@ -16,13 +16,13 @@ class SystemLookup:
     This class queries EDSM, Spansh, and Edastro to determine if a system is known.
     It caches results to avoid redundant API calls during a session.
     """
-
     def __init__(
         self, http_client: HttpClient, settings: Settings):
         self.http_client = http_client
         self.settings = settings
         # Cache to avoid redundant API calls for the same system during a session
         self._discovery_cache = {}
+
 
     def _query_edsm(self, system_name: str) -> bool:
         """Query EDSM for system information.
@@ -70,6 +70,7 @@ class SystemLookup:
             )
             return False
 
+
     def is_system_known_edsm(self, system_name: str) -> bool:
         """Check if a system is known in EDSM.
         This method checks if the system lookup is enabled in settings before querying EDSM,
@@ -84,6 +85,7 @@ class SystemLookup:
             return False
         PluginLogger.logger.debug(f"Checking if system '{system_name}' is known in EDSM.")
         return self._query_edsm(system_name)
+
 
     def _query_spansh(self, system_address: int) -> bool:
         """Query Spansh API for system information.
@@ -117,6 +119,7 @@ class SystemLookup:
         else:
             PluginLogger.logger.debug(f"System address {system_address} not found in Spansh.")
             return False
+
 
     def _query_edastro(self, system_address: int) -> bool:
         """Query Edastro API for system information.
@@ -152,6 +155,7 @@ class SystemLookup:
         else:
             PluginLogger.logger.debug(f"System address {system_address} not found in Edastro.")
             return False
+
 
     def check_system_discovery_status(
         self,
@@ -218,6 +222,7 @@ class SystemLookup:
             f"Discovery status for {system_name}: {is_discovered} (sources: {source_info})"
         )
         return is_discovered, source_info
+
 
     def cleanup(self):
         """Clean up resources used by SystemLookup."""

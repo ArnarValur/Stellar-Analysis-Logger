@@ -4,23 +4,37 @@ import queue
 import threading
 import time
 import requests
+
 from typing import Optional, Any, Dict, Tuple, Callable
 from sal.logger import PluginLogger
 from sal.constants import HttpClientTimers
 
+
 class SalRequest:
-    """Encapsulates a request for the HttpClient."""
+    """
+    Encapsulates a request for the HttpClient.
+    This class holds the URL, payload, headers, and an optional callback function
+    to be invoked upon completion of the request.
+    """
     def __init__(self, url: str, payload: dict, headers: dict, callback: Optional[Callable] = None):
         self.url = url
         self.payload = payload
         self.headers = headers
         self.callback = callback
 
+
     def __str__(self):
         return f"SalRequest(URL='{self.url}')"
 
+
+
 class HttpClient:
-    """Handles asynchronous HTTP POST requests with JSON payloads."""
+    """
+    Handles asynchronous HTTP POST requests with JSON payloads.
+    This class manages a queue of requests and processes them in a dedicated worker thread.
+    It supports sending JSON POST requests with optional API keys and callbacks,
+    as well as synchronous GET requests.
+    """
     def __init__(self, plugin_name: str, plugin_version: str):
         PluginLogger.logger.info(f"Initializing HttpClient for {plugin_name} v{plugin_version}...")
         self.user_agent = f"{plugin_name}/{plugin_version}"

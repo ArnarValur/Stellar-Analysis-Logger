@@ -10,6 +10,7 @@ from sal.system_lookup import SystemLookup
 from sal.utils import get_by_path 
 from sal.constants import PluginInfo, JournalEvents
 
+
 class DataHandler:
     """
     Processes relevant journal events, extracts specified data, formats it into

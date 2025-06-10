@@ -10,7 +10,6 @@ class Settings:
     Manages the plugin's settings, loading them from EDMC's config and providing
     Tkinter variables for the UI.
     """
-
     def __init__(self, sal):
         """Initialize the Settings and load settings from EDMC's config."""
         self.sal = sal
