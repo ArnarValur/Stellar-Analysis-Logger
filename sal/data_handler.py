@@ -23,12 +23,18 @@ class DataHandler:
         self.system_lookup = system_lookup
         self.payload_logger = plugin_logger.get_payload_logger()
 
+        # Cache for system lookup discovery status
+        self._cached_system_address: Optional[int] = None
+        self._cached_system_name: Optional[str] = None
+        self._cached_was_discovered: Optional[bool] = None
+        self._cached_discovery_source: Optional[str] = None
+
 
     # Processes a single journal entry and builds the appropriate payload.
     def process_journal_entry(self, entry: Dict[str, Any], cmdr_name: str):
         """Filters and processes a single journal entry."""
         if not self.settings or not self.http_client:
-            PluginLogger.logger.error("DataHandler settings or http_client is None.")
+            PluginLogger.logger.error("process_journal_entry: DataHandler settings or http_client is None.")
             return
 
         event_name = entry.get('event')
@@ -42,7 +48,7 @@ class DataHandler:
             return
         
         if self.settings.developer_mode:
-            PluginLogger.logger.info(f"Processing relevant event: {event_name} for CMDR {cmdr_name}")
+            PluginLogger.logger.info(f"process_journal_entry: Processing relevant event: {event_name} for CMDR {cmdr_name}")
 
         # Build the payload based on the event type
         payload = None
@@ -59,22 +65,22 @@ class DataHandler:
             elif event_name == 'SAASignalsFound':
                 payload = self._build_saasignalsfound_payload(entry, cmdr_name, timestamp)
         except Exception as e:
-            PluginLogger.logger.error(f"Error building payload for {event_name}: {e}", exc_info=True)
+            PluginLogger.logger.error(f"process_journal_entry: Error building payload for {event_name}: {e}", exc_info=True)
             return
 
         # If payload is built, send it to the API
         if payload:
             if not self.settings.api_url:
-                PluginLogger.logger.warning("API URL not configured. Cannot send payload.")
+                PluginLogger.logger.warning("process_journal_entry: API URL not configured. Cannot send payload.")
                 return
             
             if self.settings.developer_mode:
                 if self.payload_logger:
-                    self.payload_logger.debug(f"Prepared payload for {payload.get('event_type')}: {json.dumps(payload, indent=2)}")
+                    self.payload_logger.debug(f"process_journal_entry: Prepared payload for {payload.get('event_type')}: {json.dumps(payload, indent=2)}")
             
             endpoint_suffix = "exploration/events"
             full_api_url = f"{self.settings.api_url.rstrip('/')}/{endpoint_suffix.lstrip('/')}"
-            PluginLogger.logger.debug(f"Sending payload to API at {full_api_url}")
+            PluginLogger.logger.debug(f"process_journal_entry: Sending payload to API at {full_api_url}")
             self.http_client.send_json_post_request(
                 url=full_api_url, 
                 payload=payload,
@@ -83,22 +89,67 @@ class DataHandler:
             )
         else:
             if self.settings and self.settings.developer_mode: 
-                PluginLogger.logger.debug(f"No payload built for event: {event_name}")
+                PluginLogger.logger.debug(f"process_journal_entry: No payload built for event: {event_name}")
     
 
+    # Gets system discovery status from SystemLookup or uses internal cache.
+    def _get_system_discovery_status(self, event_system_address: int, event_system_name: Optional[str], event_original_was_discovered: Optional[bool]) -> Tuple[bool, str]:
+        """
+        Retrieves system discovery status, using an internal cache for the last processed system or querying SystemLookup if necessary.
+        """
+        if not self.system_lookup:
+            PluginLogger.logger.warning("SystemLookup is not available, cannot check system discovery status.")
+            return event_original_was_discovered if event_original_was_discovered is not None else False, "journal_no_lookup"
+        
+        # Check check if the current system address matches the cached on in DataHandler
+        if event_system_address == self._cached_system_address and \
+            self._cached_was_discovered is not None and \
+            self._cached_discovery_source is not None:
+            PluginLogger.logger.debug(
+                f"DataHandler cache found for system address {event_system_address}. "
+                f"Status: {self._cached_was_discovered}, Source: {self._cached_discovery_source}"
+            )
+            
+        # Cache miss or different system, so call SystemLookup
+        PluginLogger.logger.debug(f"Datahandler cache miss for system address {event_system_address}. Querying SystemLookup.")
+
+        name_for_lookup = event_system_name if event_system_name else ""
+
+        was_discovered, discovery_source = self.system_lookup.check_system_discovery_status(
+            name_for_lookup,
+            event_system_address,
+            event_original_was_discovered
+        )
+
+        # Update the cache
+        self._cached_system_address = event_system_address
+        self._cached_system_name = event_system_name
+        self._cached_was_discovered = was_discovered
+        self._cached_discovery_source = discovery_source
+
+        PluginLogger.logger.debug(
+            f"DataHandler updated cache for system address {event_system_address}. "
+            f"Status: {was_discovered}, Source: {discovery_source}"
+        )
+
+        return was_discovered, discovery_source
+
+
+    # Builds the payload for SystemEntry events
     def _build_system_entry_payload(self, entry: Dict[str, Any], cmdr_name: str, timestamp: str) -> Optional[Dict[str, Any]]:
         system_name = entry.get('StarSystem', '')
         system_address = entry.get('SystemAddress', 0)
         original_was_discovered = entry.get('WasDiscovered')
         
-        # Enhanced discovery check (if system_lookup is available)
-        if self.system_lookup:
-            was_discovered, discovery_source = self.system_lookup.check_system_discovery_status(
-                system_name, system_address, original_was_discovered
-            )
-        else:
-            was_discovered = original_was_discovered
-            discovery_source = "journal"
+        # Use the cache helper method:
+        was_discovered, discovery_source = self._get_system_discovery_status(
+            system_address, system_name, original_was_discovered
+        )
+
+        PluginLogger.logger.debug(
+            f"_build_system_entry_payload: SystemLookup status for system '{system_name}' (address: {system_address}): "
+            f"WasDiscovered: {was_discovered}, DiscoverySource: {discovery_source}"
+        )
         
         payload = {
             'commander_name': cmdr_name,
@@ -138,18 +189,19 @@ class DataHandler:
         if not event_subtype:
             return None
 
-        # Enhanced discovery check for the system
-        system_name = entry.get('StarSystem')
+        system_name = entry.get('StarSystem', '')
         system_address = entry.get('SystemAddress', 0)
         original_was_discovered = entry.get('WasDiscovered')
         
-        if self.system_lookup and system_address:
-            was_discovered, discovery_source = self.system_lookup.check_system_discovery_status(
-                system_name or '', system_address, original_was_discovered
-            )
-        else:
-            was_discovered = original_was_discovered
-            discovery_source = "journal"
+        # Use the cache helper method to get discovery status
+        was_discovered, discovery_source = self._get_system_discovery_status(
+            system_address, system_name, original_was_discovered
+        )
+
+        PluginLogger.logger.debug(
+            f"_build_scan_payload: SystemLookup status for system '{system_name}' (address: {system_address}): "
+            f"WasDiscovered: {was_discovered}, DiscoverySource: {discovery_source}"
+        )
 
         payload = {
             'commander_name': cmdr_name,
@@ -265,15 +317,14 @@ class DataHandler:
         """
         system_name = entry.get('StarSystem', '')
         system_address = entry.get('SystemAddress', 0)
-        
-        # Enhanced discovery check
-        if self.system_lookup:
-            was_discovered, discovery_source = self.system_lookup.check_system_discovery_status(
-                system_name, system_address, None
-            )
-        else:
-            was_discovered = None
-            discovery_source = "journal"
+        original_was_discovered = None
+        # Use the cache helper method to get discovery status
+        was_discovered, discovery_source = self._get_system_discovery_status(
+            system_address, system_name, original_was_discovered
+        )
+        PluginLogger.logger.debug(
+            f"_build_carrier_jump_system_entry_payload: SystemLookup status for system '{system_name}' (address: {system_address}): "
+            f"WasDiscovered: {was_discovered}, DiscoverySource: {discovery_source}")
 
         payload = {
             'commander_name': cmdr_name,
@@ -298,17 +349,18 @@ class DataHandler:
     # Builds the payload for SAASignalsFound events
     def _build_saasignalsfound_payload(self, entry: Dict[str, Any], cmdr_name: str, timestamp: str) -> Optional[Dict[str, Any]]:
         system_address = entry.get('SystemAddress', 0)
-        
-        # Enhanced discovery check for the system (if possible)
-        # Note: SAASignalsFound events typically don't include StarSystem name
-        # but we can still check with system_address if available
+        system_name = None
         was_discovered = None
         discovery_source = "journal"
         
-        if self.system_lookup and system_address:
-            was_discovered, discovery_source = self.system_lookup.check_system_discovery_status(
-                '', system_address, None
-            )
+        # Use the cache helper method to get discovery status
+        was_discovered, discovery_source = self._get_system_discovery_status(
+            system_address, system_name, was_discovered
+        )
+        PluginLogger.logger.debug(
+            f"_build_saasignalsfound_payload: SystemLookup status for system address {system_address}: "
+            f"WasDiscovered: {was_discovered}, DiscoverySource: {discovery_source}"
+        )
         
         payload = {
             'commander_name': cmdr_name,
@@ -358,4 +410,9 @@ class DataHandler:
         self.settings = None
         self.http_client = None
         self.system_lookup = None
+        #Clear cache:
+        self._cached_system_address = None
+        self._cached_system_name = None
+        self._cached_was_discovered = None
+        self._cached_discovery_source = None
         pass

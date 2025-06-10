@@ -46,15 +46,15 @@ class HttpClient:
             self._worker_thread = threading.Thread(target=self._worker, name="SAL-HttpClientWorker")
             self._worker_thread.daemon = True
             self._worker_thread.start()
-            PluginLogger.logger.info("HttpClient worker thread started.")
+            PluginLogger.logger.info("start: HttpClient worker thread started.")
         else:
-            PluginLogger.logger.info("HttpClient worker thread already running.")
+            PluginLogger.logger.info("start: HttpClient worker thread already running.")
 
 
     # Stops the HTTP client's worker thread and cleans up resources.
     def stop(self):
         """Stops the HTTP client's worker thread."""
-        PluginLogger.logger.info("Attempting to stop HttpClient worker thread...")
+        PluginLogger.logger.info("stop: Attempting to stop HttpClient worker thread...")
         self._shutdown_event.set()
         if self._worker_thread and self._worker_thread.is_alive():
             try:
@@ -64,11 +64,11 @@ class HttpClient:
 
             self._worker_thread.join(timeout=HttpClientTimers.REQUEST_TIMEOUT_S + HttpClientTimers.WORKER_SLEEP_S + 1)
             if self._worker_thread.is_alive():
-                PluginLogger.logger.warning("HttpClient worker thread did not stop in the allocated time.")
+                PluginLogger.logger.warning("stop: HttpClient worker thread did not stop in the allocated time.")
             else:
-                PluginLogger.logger.info("HttpClient worker thread stopped successfully.")
+                PluginLogger.logger.info("stop: HttpClient worker thread stopped successfully.")
         else:
-            PluginLogger.logger.info("HttpClient worker thread was not running or already stopped.")
+            PluginLogger.logger.info("stop: HttpClient worker thread was not running or already stopped.")
         self._worker_thread = None
 
 
@@ -84,7 +84,7 @@ class HttpClient:
     def send_json_post_request(self, url: str, payload: dict, api_key: Optional[str] = None, callback: Optional[Callable[[bool, Optional[dict], Optional[int]], None]] = None):
         """Queues a JSON POST request."""
         if not self._is_url_valid(url):
-            PluginLogger.logger.error(f"Invalid URL for POST request: '{url}'")
+            PluginLogger.logger.error(f"send_json_post_request: Invalid URL for POST request: '{url}'")
             if callback:
                 callback(False, {"error_origin": "URLValidation", "error": "Invalid URL provided"}, None)
             return
@@ -101,14 +101,14 @@ class HttpClient:
 
         request_item = SalRequest(url, payload, headers, callback)
         self._request_queue.put(request_item)
-        PluginLogger.logger.debug(f"Queued {request_item}")
+        PluginLogger.logger.debug(f"send_json_post_request: Queued {request_item}")
 
 
     # Sends a synchronous GET request.
     def send_get_request_sync(self, url: str, params: Optional[Dict[str, Any]] = None, custom_headers: Optional[Dict[str, Any]] = None) -> Tuple[Optional[Any], Optional[int], Optional[str]]:
         """Sends a synchronous GET request and returns the response data, status code, and error message."""
         if not self._is_url_valid(url):
-            PluginLogger.logger.error(f"Invalid URL for GET request: '{url}'")
+            PluginLogger.logger.error(f"send_get_request_sync: Invalid URL for GET request: '{url}'")
             return None, None, "Invalid URL provided"
         
         req_headers = {
@@ -117,7 +117,7 @@ class HttpClient:
         if custom_headers:
             req_headers.update(custom_headers)
         
-        PluginLogger.logger.info(f"Sending synchronous GET request to {url} with params {params} and headers {req_headers}")
+        PluginLogger.logger.info(f"send_get_request_sync: Sending synchronous GET request to {url} with params {params} and headers {req_headers}")
         try:
             response = requests.get(
                 url,
@@ -130,19 +130,19 @@ class HttpClient:
             try:
                 response_data = response.json()
             except ValueError:
-                PluginLogger.logger.warning(f"Response from {url} was not valid JSON, returning text. Body: {response.text[:500]}")
+                PluginLogger.logger.warning(f"send_get_request_sync: Response from {url} was not valid JSON, returning text. Body: {response.text[:500]}")
                 response_data = response.text
             
             return response_data, response.status_code, None
         
         except requests.exceptions.HTTPError as e:
-            PluginLogger.logger.error(f"HTTP error for {url}: {e}", exc_info=True)
+            PluginLogger.logger.error(f"send_get_request_sync: HTTP error for {url}: {e}", exc_info=True)
             return None, e.response.status_code if e.response else None, str(e)
         except requests.exceptions.Timeout as e:
-            PluginLogger.logger.error(f"Request timed out for {url}: {e}", exc_info=True)
+            PluginLogger.logger.error(f"send_get_request_sync: Request timed out for {url}: {e}", exc_info=True)
             return None, None, "Request timed out"
         except requests.exceptions.RequestException as e:
-            PluginLogger.logger.error(f"Request failed for {url}: {e}", exc_info=True)
+            PluginLogger.logger.error(f"send_get_request_sync: Request failed for {url}: {e}", exc_info=True)
             return None, None, str(e)
         except Exception as e:
             PluginLogger.logger.critical(f"Unexpected error in send_get_request_sync: {e}", exc_info=True)
@@ -169,16 +169,16 @@ class HttpClient:
                     )
                     response.raise_for_status()
                     
-                    PluginLogger.logger.debug(f"Request to {request_item.url} successful (Status: {response.status_code}).")
+                    PluginLogger.logger.debug(f"_worker: Request to {request_item.url} successful (Status: {response.status_code}).")
                     response_data = None
                     try:
                         response_data = response.json()
                     except ValueError:
-                        PluginLogger.logger.warning(f"Response from {request_item.url} was not valid JSON, returning text. Body: {response.text[:500]}")
+                        PluginLogger.logger.warning(f"_worker: Response from {request_item.url} was not valid JSON, returning text. Body: {response.text[:500]}")
                         response_data = response.text
 
                     if request_item.callback:
-                        PluginLogger.logger.debug(f"Invoking callback for {request_item.url} with success=True")
+                        PluginLogger.logger.debug(f"_worker: Invoking callback for {request_item.url} with success=True")
                         request_item.callback(True, response_data, response.status_code)
 
                 except requests.exceptions.HTTPError as e:
@@ -188,10 +188,10 @@ class HttpClient:
                     )
 
                     original_err_msg = f"HTTP error for {request_item.url}: {e.response.status_code if e.response else 'N/A'}"
-                    PluginLogger.logger.debug(f"Original format log would be: {original_err_msg} - Response: {e.response.text if e.response else 'No response text'}") 
+                    PluginLogger.logger.debug(f"_worker: Original format log would be: {original_err_msg} - Response: {e.response.text if e.response else 'No response text'}") 
                     
                     if request_item.callback:
-                        PluginLogger.logger.debug(f"Invoking callback for {request_item.url} with success=False due to HTTPError. Callback: {request_item.callback}")
+                        PluginLogger.logger.debug(f"_worker: Invoking callback for {request_item.url} with success=False due to HTTPError. Callback: {request_item.callback}")
                         error_payload_http = {
                             "error_origin": "HTTPError_Block",
                             "exception_type": type(e).__name__,
@@ -203,15 +203,15 @@ class HttpClient:
                         request_item.callback(False, error_payload_http, e.response.status_code if e.response else None)
                 
                 except requests.exceptions.Timeout as e:
-                    PluginLogger.logger.error(f"Request timed out for {request_item.url}. Type: {type(e).__name__}. Exception: {str(e)}. Callback present: {request_item.callback is not None}", exc_info=True)
+                    PluginLogger.logger.error(f"_worker: Request timed out for {request_item.url}. Type: {type(e).__name__}. Exception: {str(e)}. Callback present: {request_item.callback is not None}", exc_info=True)
                     if request_item.callback:
-                        PluginLogger.logger.debug(f"Invoking callback for {request_item.url} with success=False due to Timeout. Callback: {request_item.callback}")
+                        PluginLogger.logger.debug(f"_worker: Invoking callback for {request_item.url} with success=False due to Timeout. Callback: {request_item.callback}")
                         request_item.callback(False, {"error_origin": "Timeout_Block", "error": "Request timed out", "exception_type": type(e).__name__, "exception_message": str(e)}, None)
                 
                 except requests.exceptions.RequestException as e:
-                    PluginLogger.logger.error(f"Request failed for {request_item.url}. Type: {type(e).__name__}. Exception: {str(e)}. Callback present: {request_item.callback is not None}", exc_info=True)
+                    PluginLogger.logger.error(f"_worker: Request failed for {request_item.url}. Type: {type(e).__name__}. Exception: {str(e)}. Callback present: {request_item.callback is not None}", exc_info=True)
                     if request_item.callback:
-                        PluginLogger.logger.debug(f"Invoking callback for {request_item.url} with success=False due to RequestException. Callback: {request_item.callback}")
+                        PluginLogger.logger.debug(f"_worker: Invoking callback for {request_item.url} with success=False due to RequestException. Callback: {request_item.callback}")
                         error_payload_req = {
                             "error_origin": "RequestException_Block",
                             "exception_type": type(e).__name__,
@@ -221,13 +221,12 @@ class HttpClient:
                 
                 finally:
                     self._request_queue.task_done()
-                    PluginLogger.logger.debug(f"Finished processing {request_item}. task_done() called.")
+                    PluginLogger.logger.debug(f"_worker: Finished processing {request_item}. task_done() called.")
 
             except queue.Empty:
                 continue
             except Exception as e:
-                PluginLogger.logger.critical(f"Unexpected critical error in HttpClient worker: {e}", exc_info=True)
+                PluginLogger.logger.critical(f"_worker: Unexpected critical error in HttpClient worker: {e}", exc_info=True)
                 time.sleep(HttpClientTimers.WORKER_SLEEP_S * 5)
 
-        if PluginLogger._developer_mode:
-            PluginLogger.logger.info("HttpClient worker finished processing queue and is shutting down.")
+        PluginLogger.logger.info("HttpClient worker finished processing queue and is shutting down.")
