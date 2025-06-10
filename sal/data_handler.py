@@ -282,6 +282,7 @@ class DataHandler:
 
         elif event_subtype == 'AsteroidClusterScan':
             # Asteroid cluster specific data
+            # TODO: Investigate if we need to add more fields here
             if entry.get('Parents'): 
                 scan_data['Parents'] = entry.get('Parents')
 
