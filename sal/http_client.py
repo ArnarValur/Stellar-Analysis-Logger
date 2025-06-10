@@ -22,7 +22,7 @@ class SalRequest:
 class HttpClient:
     """Handles asynchronous HTTP POST requests with JSON payloads."""
     def __init__(self, plugin_name: str, plugin_version: str):
-        PluginLogger.logger.debug(f"Initializing HttpClient for {plugin_name} v{plugin_version}...")
+        PluginLogger.logger.info(f"Initializing HttpClient for {plugin_name} v{plugin_version}...")
         self.user_agent = f"{plugin_name}/{plugin_version}"
         self._request_queue = queue.Queue()
         self._worker_thread = None
