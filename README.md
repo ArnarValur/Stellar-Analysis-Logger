@@ -2,6 +2,8 @@
 
 **This plugin for Elite Dangerous Market Connector (EDMC) logs detailed exploration data and system information into a database of mine.**
 
+Note: I only collect astrophysical data from the Pilots Journal regarding Stars, Planets, Moons and Astroid Belts, and nothing else.
+
 This project is highly inspired from [BGS-Tally](https://github.com/aussig/BGS-Tally) by [aussig](https://github.com/aussig).
 
 ## Features
