@@ -46,6 +46,7 @@ class HttpClient:
             self._worker_thread = threading.Thread(target=self._worker, name="SAL-HttpClientWorker")
             self._worker_thread.daemon = True
             self._worker_thread.start()
+            PluginLogger.logger.info("HttpClient worker thread started.")
         else:
             PluginLogger.logger.info("HttpClient worker thread already running.")
 
@@ -53,6 +54,7 @@ class HttpClient:
     # Stops the HTTP client's worker thread and cleans up resources.
     def stop(self):
         """Stops the HTTP client's worker thread."""
+        PluginLogger.logger.info("Attempting to stop HttpClient worker thread...")
         self._shutdown_event.set()
         if self._worker_thread and self._worker_thread.is_alive():
             try:

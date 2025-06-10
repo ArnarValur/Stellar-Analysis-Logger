@@ -10,7 +10,7 @@ venv/
 
 # Logs
 *.log
-.logs/
+logs/*
 
 # IDE / Editor specific
 .vscode/
