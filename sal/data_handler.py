@@ -75,13 +75,17 @@ class DataHandler:
                 PluginLogger.logger.warning("process_journal_entry: API URL not configured. Cannot send payload.")
                 return
             
+            # TODO make sure that developer mode is actually detected correctly
             if self.settings.developer_mode:
                 if self.payload_logger:
                     self.payload_logger.debug(f"process_journal_entry: Prepared payload for {payload.get('event_type')}: {json.dumps(payload, indent=2)}")
             
+            # Prepare the full API URL
             endpoint_suffix = "exploration/events"
             full_api_url = f"{self.settings.api_url.rstrip('/')}/{endpoint_suffix.lstrip('/')}"
             PluginLogger.logger.debug(f"process_journal_entry: Sending payload to API at {full_api_url}")
+
+            # Send the payload to the API
             self.http_client.send_json_post_request(
                 url=full_api_url, 
                 payload=payload,
