@@ -201,9 +201,9 @@ class SystemLookup:
         # Determine result
         is_discovered = len(discovery_sources) > 0
         source_info = (
-            f"external:{','.join(discovery_sources)}"
+            f"{','.join(discovery_sources)}"
             if discovery_sources
-            else "external:none"
+            else "Not found in any source"
         )
 
         # If external sources don't have data, fall back to journal value
