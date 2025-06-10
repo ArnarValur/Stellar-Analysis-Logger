@@ -1,13 +1,12 @@
-import time
 import json
 
 from datetime import datetime, timezone
-from typing import Dict, Optional, Any, TYPE_CHECKING
+from typing import Dict, Optional, Any, Tuple
 
 from sal.logger import PluginLogger
 from sal.settings import Settings
 from sal.http_client import HttpClient
-from sal.system_lookup import *
+from sal.system_lookup import SystemLookup
 from sal.utils import get_by_path 
 from sal.constants import PluginInfo, JournalEvents
 
@@ -54,6 +53,7 @@ class DataHandler:
         payload = None
 
         # Handle different event types with specific payload builders
+        # TODO: I got "Location" event type in constants, but I don't remember why I added it there, something todo with CarrierJump?
         try:
             timestamp = entry.get('timestamp', datetime.now(timezone.utc).isoformat())
             if event_name == 'FSDJump':
@@ -98,7 +98,7 @@ class DataHandler:
         Retrieves system discovery status, using an internal cache for the last processed system or querying SystemLookup if necessary.
         """
         if not self.system_lookup:
-            PluginLogger.logger.warning("SystemLookup is not available, cannot check system discovery status.")
+            PluginLogger.logger.warning("_get_system_discovery_status: SystemLookup is not available, cannot check system discovery status.")
             return event_original_was_discovered if event_original_was_discovered is not None else False, "journal_no_lookup"
         
         # Check check if the current system address matches the cached on in DataHandler
@@ -111,7 +111,7 @@ class DataHandler:
             )
             
         # Cache miss or different system, so call SystemLookup
-        PluginLogger.logger.debug(f"Datahandler cache miss for system address {event_system_address}. Querying SystemLookup.")
+        PluginLogger.logger.debug(f"_get_system_discovery_status: Datahandler cache miss for system address {event_system_address}. Using cached status: {self._cached_was_discovered}, Source: {self._cached_discovery_source}.")
 
         name_for_lookup = event_system_name if event_system_name else ""
 
@@ -318,6 +318,7 @@ class DataHandler:
         system_name = entry.get('StarSystem', '')
         system_address = entry.get('SystemAddress', 0)
         original_was_discovered = None
+
         # Use the cache helper method to get discovery status
         was_discovered, discovery_source = self._get_system_discovery_status(
             system_address, system_name, original_was_discovered
@@ -350,12 +351,11 @@ class DataHandler:
     def _build_saasignalsfound_payload(self, entry: Dict[str, Any], cmdr_name: str, timestamp: str) -> Optional[Dict[str, Any]]:
         system_address = entry.get('SystemAddress', 0)
         system_name = None
-        was_discovered = None
-        discovery_source = "journal"
+        original_was_discovered = None
         
         # Use the cache helper method to get discovery status
         was_discovered, discovery_source = self._get_system_discovery_status(
-            system_address, system_name, was_discovered
+            system_address, system_name, original_was_discovered
         )
         PluginLogger.logger.debug(
             f"_build_saasignalsfound_payload: SystemLookup status for system address {system_address}: "
